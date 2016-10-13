@@ -23,22 +23,23 @@ def lxbatchSubmitJob (run, path, cfg, outdir, queue, job_dir, dryrun):
     jobname = job_dir+'/H4Reco_'+queue+'_'+run+'.sh'
     f = open (jobname, 'w')
     f.write ('#!/bin/sh' + '\n\n')
-    f.write ('export X509_USER_PROXY=/afs/cern.ch/user/s/spigazzi/x509up_u68758 \n\n')
+    f.write ('export X509_USER_PROXY=/afs/cern.ch/user/b/bmarzocc/x509up_u35923 \n\n')
     f.write ('git clone --recursive https://github.com/simonepigazzini/H4Analysis.git \n')
     f.write ('cd H4Analysis/ \n')
     f.write ('source scripts/setup.sh \n')
     f.write ('make -j 2 \n')
-    f.write ('cp '+path+cfg+' job.cfg \n\n')
-    f.write ('cp '+path+'/ntuples/Template*.root ./ntuples/ \n\n')
-    f.write ('bin/H4Reco job.cfg '+run+'\n\n')
-    if "/eos/cms/" in outdir:
-        f.write ('cmsStage -f ntuples/*'+run+'.root '+outdir+'\n')
+    #f.write ('cp '+path+cfg+' job.cfg \n\n')
+    #f.write ('cp '+path+'/ntuples/Template*.root ./ntuples/ \n\n')
+    f.write ('bin/H4Reco '+path+cfg+' '+run+'\n\n')
+    if "store/" in outdir:
+        f.write ('cd ntuples \n\n')
+        f.write ('/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select cp *'+run+'.root '+outdir+'\n')
     else:
         f.write ('cp ntuples/*'+run+'.root '+outdir+'\n')
     f.close ()
     getstatusoutput ('chmod 755 ' + jobname)
     if not dryrun:
-        getstatusoutput ('cd '+job_dir+'; bsub -q ' + queue + ' ' + '-u simone.pigazzini@cern.ch ' + jobname + '; cd -')
+        getstatusoutput ('cd '+job_dir+'; bsub -q ' + queue + ' ' + '-u badder.marzocchi@cern.ch ' + jobname + '; cd -')
 
 # ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     if args.batch == 'lxbatch':
         if getoutput('gfal-ls root://eoscms/'+stageOutDir) == "":
             print "ntuples version "+args.version+" directory on eos already exist! no jobs created."
-            exit(0)
+            #exit(0)
         getstatusoutput('cmsMkdir '+stageOutDir)    
     else:
         getstatusoutput('mkdir -p '+stageOutDir)    

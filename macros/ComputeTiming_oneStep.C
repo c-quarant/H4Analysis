@@ -915,18 +915,22 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        h4->Draw((std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]:amp_max[")+iMCP+std::string("] >> timingCorrection_wrtRm2")).c_str(),Selection3.c_str());
 
     if(iMCP != "MiB2"){
+       std::vector<float> points_wrtMiB2;
        timingCorrection_wrtMiB2->FitSlicesY();
        TH1F* timingCorrection_wrtMiB2_1 = (TH1F*)inputFile->Get("timingCorrection_wrtMiB2_1");
        timingCorrection_wrtMiB2_1->GetXaxis()->SetTitle((std::string("amp_max[")+iMCP+std::string("]")).c_str());
        timingCorrection_wrtMiB2_1->GetYaxis()->SetTitle("time-time[MiB2]");
-       timingCorrection_wrtMiB2_1->SetAxisRange(timingCorrection_wrtMiB2_1->GetMinimum()-0.2,timingCorrection_wrtMiB2_1->GetMaximum()+0.2, "Y");
+
+       for(int ii = 1; ii <= timingCorrection_wrtMiB2_1->GetNbinsX(); ii++)
+           if(timingCorrection_wrtMiB2_1->GetBinContent(ii)!= 0) points_wrtMiB2.push_back(timingCorrection_wrtMiB2_1->GetBinContent(ii));
+       std::sort(points_wrtMiB2.begin(),points_wrtMiB2.end());
+
+       timingCorrection_wrtMiB2_1->SetAxisRange(points_wrtMiB2.at(0)-0.2,points_wrtMiB2.at(points_wrtMiB2.size()-1)+0.2, "Y");
        timingCorrection_wrtMiB2_1->SetMarkerStyle(20);
        timingCorrection_wrtMiB2_1->SetMarkerSize(0.9);
        timingCorrection_wrtMiB2_1->SetMarkerColor(kBlack);
        timingCorrection_wrtMiB2_1->SetLineColor(kBlack);
        
-       //std::cout << "Extreme = " << timingCorrection_wrtMiB2_1->GetMinimum()-0.1 << " " << timingCorrection_wrtMiB2_1->GetMaximum()+0.1 << std::endl;
-    
        TF1* fit_corr1;
        fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,3000.);
        timingCorrection_wrtMiB2_1->Fit("fit_corr1");
@@ -949,11 +953,17 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
     }
  
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
+       std::vector<float> points_wrtRm2;
        timingCorrection_wrtRm2->FitSlicesY();
        TH1F* timingCorrection_wrtRm2_1 = (TH1F*)inputFile->Get("timingCorrection_wrtRm2_1");
        timingCorrection_wrtRm2_1->GetXaxis()->SetTitle((std::string("amp_max[")+iMCP+std::string("]")).c_str());
        timingCorrection_wrtRm2_1->GetYaxis()->SetTitle("time-time[Rm2]");
-       timingCorrection_wrtRm2_1->SetAxisRange(timingCorrection_wrtRm2_1->GetMinimum()-0.1,timingCorrection_wrtRm2_1->GetMaximum()+0.1, "Y");
+
+       for(int ii = 1; ii <= timingCorrection_wrtRm2_1->GetNbinsX(); ii++)
+           if(timingCorrection_wrtRm2_1->GetBinContent(ii)!= 0) points_wrtRm2.push_back(timingCorrection_wrtRm2_1->GetBinContent(ii));
+       std::sort(points_wrtRm2.begin(),points_wrtRm2.end());
+
+       timingCorrection_wrtRm2_1->SetAxisRange(points_wrtRm2.at(0)-0.2,points_wrtRm2.at(points_wrtRm2.size()-1)+0.2, "Y");
        timingCorrection_wrtRm2_1->SetMarkerStyle(20);
        timingCorrection_wrtRm2_1->SetMarkerSize(0.9);
        timingCorrection_wrtRm2_1->SetMarkerColor(kBlack);

@@ -171,11 +171,22 @@ bool HodoBTFReco::ProcessEvent(const H4Tree& h4Tree, map<string, PluginBase*>& p
             }
         }	
     }
+    
+    float posX=0.;
+    for(unsigned int iPos=0; iPos<hodoXpos.size(); iPos++)
+        posX+= hodoXpos.at(iPos);
+    if(hodoXpos.size() > 0) posX=posX/hodoXpos.size();
+    
+    float posY=0.;
+    for(unsigned int iPos=0; iPos<hodoYpos.size(); iPos++)
+        posY+= hodoYpos.at(iPos);
+    if(hodoYpos.size() > 0) posY=posY/hodoYpos.size();
+
     //--fill output tree with default values if needed
     hodoTree_.n_hitsX = hodoXpos.size();
     hodoTree_.n_hitsY = hodoYpos.size();    
-    hodoTree_.X[0] = hodoXpos.size() > 0 ? hodoXpos[0] : -1;
-    hodoTree_.Y[0] = hodoYpos.size() > 0 ? hodoYpos[0] : -1;
+    hodoTree_.X[0] = hodoXpos.size() > 0 ? posX : -1;
+    hodoTree_.Y[0] = hodoYpos.size() > 0 ? posY : -1;
     hodoTree_.Fill();
 
     return true;

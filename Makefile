@@ -23,24 +23,24 @@ MAIN = bin/H4Reco
 all: dynamicTree cfgManager $(DEPS_OBJS) $(PLUG_OBJS) $(MAIN) lib/LinkDef.cxx 
 
 lib/%.o: src/%.cc interface/%.h $(DEPS)
+	@echo " CXX $<"
 	@$ $(CXX) $(CXXFLAGS) -c -o $@ $< $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS)
-	@echo " CXX $<"
 
-lib/lib%.so: plugins/%.cc plugins/%.h $(PLUG_DEPS)
-	@$ $(CXX) $(CXXFLAGS) $(SOFLAGS) -o $@ $< $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS) $(LIB)
+lib/lib%.so: plugins/%.cc plugins/%.h $(PLUG_DEPS) $(DEPS_OBJS)
 	@echo " CXX $<"
+	@$ $(CXX) $(CXXFLAGS) $(SOFLAGS) -o $@ $< $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS) $(LIB)
 
 lib/LinkDef.cxx: interface/WFViewer.h interface/MCPAnalyzer.h interface/LinkDef.h 
 	@$ rootcling -f $@ -c $^
 	@echo " rootcling $<"
 
 lib/H4Dict.so: lib/LinkDef.cxx $(DICT_OBJS)
-	@$ $(CXX) $(CXXFLAGS) $(SOFLAGS) -o $@ $^ $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS) $(LIB)
 	@echo " CXX $<"
+	@$ $(CXX) $(CXXFLAGS) $(SOFLAGS) -o $@ $^ $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS) $(LIB)
 
 bin/%: main/%.cpp $(DEPS_OBJS) interface/PluginLoader.h CfgManager/lib/CfgManagerDict.so
+	@echo " CXX $<"o
 	@$ $(CXX) $(CXXFLAGS) -ldl -o $@ $^ $(INCLUDE) $(ROOT_LIB) $(ROOT_FLAGS) $(LIB)
-	@echo " CXX $<"
 
 CfgManager/lib/CfgManagerDict.so: cfgManager
 

@@ -27,7 +27,7 @@ bool MakeCovarianceMatrix::ProcessEvent(const H4Tree& event, map<string, PluginB
     for(auto& channel : channelsNames_)
     {        
         WFClass* wf = (WFClass*)plugins[digiInstance_]->GetSharedData(digiInstance_+"_"+channel, "", false).at(0).obj;
-        vector<double>* samples = wf->GetSamples();
+        auto samples = wf->GetSamples();
         for(int iSample=firstSample_; iSample<lastSample_; ++iSample)
         {
             values_[channel][iSample-firstSample_].push_back(samples->at(iSample));

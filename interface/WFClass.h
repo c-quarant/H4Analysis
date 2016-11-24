@@ -47,7 +47,7 @@ public:
     ~WFClass() {};
 
     //---getters---
-    inline vector<double>* GetSamples() {return &samples_;};
+    inline const vector<double>* GetSamples() {return &samples_;};
     inline float           GetBaseline() {return baseline_;}
     inline int             GetNSample() {return samples_.size();};
     inline float           GetTUnit() {return tUnit_;};

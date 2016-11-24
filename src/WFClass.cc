@@ -244,14 +244,15 @@ void WFClass::SetTemplate(TH1* templateWF)
         cout << ">>>ERROR: template passed as input do not exist" << endl;
         return;
     }
-    
+
     //---reset template fit variables
     if(interpolator_)
-        delete interpolator_;
+      return;
+
     interpolator_ = new ROOT::Math::Interpolator(0, ROOT::Math::Interpolation::kCSPLINE);
     tempFitTime_ = templateWF->GetBinCenter(templateWF->GetMaximumBin());
     tempFitAmp_ = -1;
-    
+
     //---fill interpolator data
     vector<double> x, y;
     for(int iBin=1; iBin<=templateWF->GetNbinsX(); ++iBin)
@@ -260,6 +261,8 @@ void WFClass::SetTemplate(TH1* templateWF)
         y.push_back(templateWF->GetBinContent(iBin));
     }
     interpolator_->SetData(x, y);
+
+
 
     return;
 }
@@ -333,7 +336,7 @@ WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
         ROOT::Math::Functor chi2(this, &WFClass::TemplateChi2, 2);
         ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad");
         minimizer->SetMaxFunctionCalls(100000);
-        minimizer->SetMaxIterations(100);
+        minimizer->SetMaxIterations(1000);
         minimizer->SetTolerance(1e-3);
         minimizer->SetPrintLevel(0);
         minimizer->SetFunction(chi2);

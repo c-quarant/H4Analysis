@@ -4,6 +4,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+#include <math.h>
+#include <algorithm>
 
 #include "TObject.h"
 
@@ -13,7 +16,7 @@ class FFTClass : public TObject
 {
 public:
     //---ctors---
-    FFTClass() {};
+    FFTClass();
     FFTClass(int N, double* Re, double* Im);
     FFTClass(vector<double>& Re, vector<double>& Im);
     
@@ -21,19 +24,21 @@ public:
     ~FFTClass() {};
 
     //---getters---
-    vector<double>* GetRe() {return &Re_;};
-    vector<double>* GetIm() {return &Im_;};
+    const vector<double>* Get(string var);
+    const vector<double>* GetRe() {return &vars_["re"];};
+    const vector<double>* GetIm() {return &vars_["im"];};
+    const vector<double>* GetAmplitudes();
+    const vector<double>* GetPhases();
     
     //---setters---
     void SetPointsComplex(int N, double* Re, double* Im);
     void SetPointsComplex(vector<double>& Re, vector<double>& Im);
 
     //---utils---
-    void Reset() {Re_.clear(); Im_.clear();};
+    void Reset();
     
 private:
-    vector<double> Re_;
-    vector<double> Im_;
+    map<string, vector<double> > vars_;
 };
 
 #endif

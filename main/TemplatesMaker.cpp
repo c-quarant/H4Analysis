@@ -17,7 +17,7 @@
 using namespace std;
 
 //----------DFT---------------------------------------------------------------------------
-pair<TH1F, TH1F> DFT_cut(TProfile* inWave, string name, float fCut=800)
+pair<TH1F, TH1F> DFT_cut(TH1F* inWave, string name, float fCut)
 {
     float *Re, *Im, *mod;
     int nbins = inWave->GetNbinsX();
@@ -52,8 +52,8 @@ pair<TH1F, TH1F> DFT_cut(TProfile* inWave, string name, float fCut=800)
         float recoWave=0;
         for(int k=0; k<nbins/2; k++) 
         { 
-	    if(k > fCut)
-	    	continue;
+	  if(k > fCut)
+	    continue;
             float angle = 2 * TMath::Pi() * t * k / nbins; 
 	    recoWave += Re[k]*cos(angle) - Im[k]*sin(angle);
 	}  
@@ -213,9 +213,8 @@ int main(int argc, char* argv[])
         //---require reference channel to be good
         if(refTime/tUnit < opts.GetOpt<int>(refChannel+".signalWin", 0) ||
            refTime/tUnit > opts.GetOpt<int>(refChannel+".signalWin", 1) ||
-	   refBaseline.rms > opts.GetOpt<float>(refChannel+".noiseThreshold") ||
-	   refAmpl < opts.GetOpt<int>(refChannel+".amplitudeThreshold"))
-            continue;
+	   refBaseline.rms > opts.GetOpt<float>(refChannel+".noiseThreshold") ||  refAmpl < opts.GetOpt<int>(refChannel+".amplitudeThreshold"))
+	  continue;
 
         //---template channels
         for(auto& channel : channelsNames)
@@ -257,7 +256,7 @@ int main(int argc, char* argv[])
                 vector<float>* analizedWF = WF.GetSamples();
                 for(int iSample=0; iSample<analizedWF->size(); ++iSample)
 		  templates[channel]->Fill(iSample*tUnit-refTime, analizedWF->at(iSample)/channelAmpl);
-            }
+	    }
         }
     }   
 
@@ -268,10 +267,10 @@ int main(int argc, char* argv[])
 
     for(auto& channel : channelsNames)
     {
-        // pair<TH1F, TH1F> dft = DFT_cut(templates[channel], channel, 800);
-        // dft.first.Write();
-        // dft.second.Write();
-      if (templates[channel]->GetEntries()>1024*100)
+      //      pair<TH1F, TH1F> dft = DFT_cut(getMeanProfile(templates[channel]), channel, 4);
+      //      dft.first.Write();
+      //      dft.second.Write();
+      if (templates[channel]->GetEntries()>1024*10)
 	{
 	  TH1F* prof=getMeanProfile(templates[channel]);
 	  templates[channel]->Write();

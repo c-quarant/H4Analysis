@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
         if(index % 1000 == 0)
         {
             cout << ">>> Processed events: " << index-stoul(run)*1e9 << "/"
-                 << (maxEvents<0 ? h4Tree.GetEntries() : min((int)h4Tree.GetEntries(), maxEvents))
+                 << (maxEvents<0 ? h4Tree.GetEntries() : min(h4Tree.GetEntries(), (uint64)maxEvents))
                  << endl;
             TrackProcess(cpu, mem, vsz, rss);
         }

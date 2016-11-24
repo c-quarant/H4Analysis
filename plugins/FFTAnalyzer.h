@@ -4,8 +4,10 @@
 #include <iostream>
 #include <math.h>
 
+#include "TH2F.h"
 #include "TVirtualFFT.h"
 
+#include "interface/utils.h"
 #include "interface/PluginBase.h"
 #include "interface/DigiTree.h"
 #include "interface/WFTree.h"
@@ -24,20 +26,26 @@ public:
     //---utils---
     bool Begin(CfgManager& opts, uint64* index);
     bool ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plugins, CfgManager& opts);
+    bool End(CfgManager& opts);
     
 private:    
     //---internal data
+    uint64*                   index_;
     unsigned int              n_tot_;
-    int                       nInBins_;
-    int                       nOutBins_;
+    int                       nSamples_;
     int*                      current_ch_;
     float*                    freqs_;
+    float*                    re_;
+    float*                    im_;
     float*                    amplitudes_;
     float*                    phases_;
     string                    fftType_;
     string                    srcInstance_;
     vector<string>            channelsNames_;
+    vector<string>            templatesNames_;
     map<string, int>          channelsMap_;
+    map<string, TH1F*>        templatesHistos_;
+    map<string, TH2F*>        templates2dHistos_;
     map<string, FFTClass*>    FFTs_;
     map<string, WFClass*>     WFs_;
     TTree*                    fftTree_;         

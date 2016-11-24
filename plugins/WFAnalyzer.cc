@@ -31,6 +31,8 @@ bool WFAnalyzer::Begin(CfgManager& opts, uint64* index)
             TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
             TH1* wfTemplate=(TH1*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
                                                      +"_"+templateTag).c_str());
+	    templates_[channel] = (TH1F*) wfTemplate->Clone();
+	    templates_[channel] -> SetDirectory(0);
             templateFile->Close();
         }
         //---keep track of all the possible time reco method requested
@@ -147,7 +149,7 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         //---WFs---
         if(fillWFtree)
         {
-            vector<double>* analizedWF = WFs_[channel]->GetSamples();
+            auto analizedWF = WFs_[channel]->GetSamples();
             int nSamples = analizedWF->size();
             float tUnit = WFs_[channel]->GetTUnit();
             for(int jSample=0; jSample<analizedWF->size(); ++jSample)

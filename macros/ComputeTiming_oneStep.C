@@ -31,7 +31,7 @@ std::string scintMin = "200.";
 std::string scintMax = "700.";
 std::string timeChi2 = "99999999.";
 bool doScan_Corr = false;
-
+bool isEfficiencyRun = false;
 
 void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan, bool doScanEff, bool doDoubleGauss, std::string HodoSelection, bool doOnlyWrtMiB2);
 void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan_Corr, std::string HodoSelection, bool doOnlyWrtMiB2);
@@ -44,6 +44,8 @@ void CheckEfficiency(TTree* h4, std::string inputs, std::string iMCP, std::strin
 void HodoValidation(TTree* h4, TTree* hodo, TTree* adc, int nParticle);
 std::string AddSelection(TTree*, std::string, std::string, std::string, bool);
 std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string iMCP, std::string numSel, std::string denSel);
+void CheckSelectionEfficiency(TTree* h4, std::string iMCP, std::string Selection);
+std::vector<std::string> split(const std::string text, std::string sep);
 
 void ComputeTiming_oneStep(std::string inputs, std::string iMCP, std::string Timing, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2 = false, bool doFirstStep = true, bool doPulseShapes = false, bool doScan = false, bool doScanEff = false, bool doDoubleGauss = false, std::string hodoXmin="0", std::string hodoXmax="30", std::string hodoYmin="0", std::string hodoYmax="30")
 {
@@ -109,7 +111,6 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     char Selection5 [1000];
     
     //(time-time_max) vs amp selection
-    //if(iMCP == "M25") sprintf (Selection1,(std::string("fabs(time_max[")+iMCP+std::string("]-time[")+iMCP+iTiming+std::string("]-(%f+(%f)*amp_max[")+iMCP+std::string("]))<0.25")).c_str(),Params->at(0),Params->at(1));
     sprintf (Selection1,(std::string("fabs(time_max[")+iMCP+std::string("]-time[")+iMCP+iTiming+std::string("]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])))<0.25")).c_str(),Params->at(0),Params->at(1),Params->at(2));
 
     //time correction
@@ -128,16 +129,14 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     std::string Selection8;
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection8 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection8 = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection8 = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection8,"0.",false);
       Selection8 = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection8,"0.",false);
-      //Selection8 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection8,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection8 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection8 = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection8,"1",true);
          Selection8 = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection8,"1",true);
-         //Selection8 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection8,"0.",false);
       }else{
          Selection8 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection8 = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection8,"0.",false);
@@ -145,10 +144,12 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
          Selection8 = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection8,"1",true);
          Selection8 = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection8,"1",true);
          Selection8 = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection8,"1",true);
-         //Selection8 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection8,"0.",false);
       }   
-    }
+    } 
     std::string Selection9 = Selection8+std::string(" && ")+std::string(Selection1)+HodoSelection; 
+
+    std::cout << "Selection = " << Selection9 << std::endl;
+    CheckSelectionEfficiency(h4,iMCP,Selection9);
 
     std::string Selection10 = Selection2+std::string(" time_wrtMiB2");
     std::string Selection11 = Selection3+std::string(" time_vs_amp_wrtMiB2");
@@ -157,22 +158,36 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     std::string Selection14 = Selection6+std::string(" time_wrtMiB2_noCorrection");
     std::string Selection15 = Selection7+std::string(" time_wrtRm2_noCorrection");
 
-    //std::cout << "wrt MiB2 = " << Selection14.c_str() << ", " << Selection9.c_str() << std::endl;
-    //std::cout << "wrt Rm2 = " << Selection15.c_str() << ", " << Selection9.c_str() << std::endl;
-
     if(iMCP != "MiB2"){
-       h4->Draw(Selection10.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str()); 
-       h4->Draw(Selection11.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str()); 
-       h4->Draw(Selection14.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str()); 
+       h4->Draw(Selection10.c_str(),Selection9.c_str()); 
+       h4->Draw(Selection11.c_str(),Selection9.c_str()); 
+       h4->Draw(Selection14.c_str(),Selection9.c_str()); 
     }
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
-       h4->Draw(Selection12.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str());
-       h4->Draw(Selection13.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str()); 
-       h4->Draw(Selection15.c_str(),std::string(Selection9+" && amp_max["+iMCP+"]>"+thresMCP).c_str()); 
+       h4->Draw(Selection12.c_str(),Selection9.c_str());
+       h4->Draw(Selection13.c_str(),Selection9.c_str()); 
+       h4->Draw(Selection15.c_str(),Selection9.c_str()); 
     }
 
-    if(time_wrtMiB2->GetEntries() < 2000) time_wrtMiB2->Rebin(8);
-    if(time_wrtRm2->GetEntries() < 2000) time_wrtRm2->Rebin(8);
+    if(time_wrtMiB2->GetEntries() < 2000) time_wrtMiB2->Rebin(4);
+    if(time_wrtRm2->GetEntries() < 2000) time_wrtRm2->Rebin(4);
+
+    float sub_wrtMiB2 = 0.;
+    float sub_wrtMiB2_error = 0.;
+    float sub_wrtRm2 = 0.;
+    float sub_wrtRm2_error = 0.;
+
+    if(isEfficiencyRun == false){
+       sub_wrtMiB2 = 24.E-3;
+       sub_wrtMiB2_error = 2.E-3;
+       sub_wrtRm2 = 18.E-3;
+       sub_wrtRm2_error = 3.E-3;
+    }else{
+       sub_wrtMiB2 = 26.E-3;
+       sub_wrtMiB2_error = 3.E-3;
+       sub_wrtRm2 = 24.E-3;
+       sub_wrtRm2_error = 3.E-3;
+    }
 
     if(iMCP != "MiB2"){
        if(doDoubleGauss == false) g_res = new TF1("g_res","gaus",-1.,1.);
@@ -195,6 +210,8 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        TLatex *latexLabel = new TLatex();
        float sigma_eff;
        float s_sigma;
+       float sigma_eff_sub;
+       float s_sigma_sub;
        if(doDoubleGauss == true){
           float f1 = g_res->GetParameter(0)/(g_res->GetParameter(0)+g_res->GetParameter(3));
           float f2 = g_res->GetParameter(3)/(g_res->GetParameter(0)+g_res->GetParameter(3));
@@ -205,8 +222,13 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            s_sigma = g_res->GetParError(2);
        }
 
-       if(iMCP != "MiB2" && iMCP != "Rm2") sigma_eff = sqrt(sigma_eff*sigma_eff-23.E-3*23.E-3);
-       
+       if(iMCP != "MiB2" && iMCP != "Rm2"){
+          sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtMiB2*sub_wrtMiB2);
+          s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtMiB2*sub_wrtMiB2*sub_wrtMiB2_error*sub_wrtMiB2_error)/sigma_eff_sub;
+       }
+       sigma_eff = sigma_eff_sub;
+       s_sigma = s_sigma_sub;
+
        sprintf (Sigma,"#sigma = %.0f+/-%.0f ps",sigma_eff*1000.,s_sigma*1000.);
 
        latexLabel->SetTextSize(0.05);
@@ -249,6 +271,8 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        TLatex *latexLabel = new TLatex();
        float sigma_eff;
        float s_sigma; 
+       float sigma_eff_sub;
+       float s_sigma_sub;
        if(doDoubleGauss == true){
           float f1 = g_res->GetParameter(0)/(g_res->GetParameter(0)+g_res->GetParameter(3));
           float f2 = g_res->GetParameter(3)/(g_res->GetParameter(0)+g_res->GetParameter(3));
@@ -259,7 +283,12 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            s_sigma = g_res->GetParError(2);
        }
 
-       if(iMCP != "MiB2" && iMCP != "Rm2") sigma_eff = sqrt(sigma_eff*sigma_eff-17.E-3*17.E-3);
+       if(iMCP != "MiB2" && iMCP != "Rm2"){
+          sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtRm2*sub_wrtRm2);
+          s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtRm2*sub_wrtRm2*sub_wrtRm2_error*sub_wrtRm2_error)/sigma_eff_sub;
+       }
+       sigma_eff = sigma_eff_sub;
+       s_sigma = s_sigma_sub;
        
        sprintf (Sigma,"#sigma = %.0f+/-%.0f ps",sigma_eff*1000.,s_sigma*1000.);
 
@@ -280,7 +309,7 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
     }   
 
-    if(iMCP != "MiB2"){
+    /*if(iMCP != "MiB2"){
        if(doDoubleGauss == false) g_res = new TF1("g_res","gaus",time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.1);
        else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.1);
        g_res->SetParameters(0,0.,time_wrtMiB2_noCorrection->GetEntries());
@@ -332,7 +361,7 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        c4 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtRm2_"+Timing+"_thres"+thresMCP+"_noCorrection.png").c_str(),"png");
        c4 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtRm2_"+Timing+"_thres"+thresMCP+"_noCorrection.pdf").c_str(),"pdf");
        delete g_res;
-    }
+    }*/
 
     TH2F* time_vs_amp_wrtMiB2_2;
     TH2F* time_vs_amp_wrtRm2_2;
@@ -459,6 +488,8 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
            float sigma_eff = 0.;
            float s_sigma = 0.;
+           float sigma_eff_sub;
+           float s_sigma_sub;
            if(doDoubleGauss == true){
               float f1 = resFitAlt_wrtMiB2[ii]->GetParameter(0)/(resFitAlt_wrtMiB2[ii]->GetParameter(0)+resFitAlt_wrtMiB2[ii]->GetParameter(3));
               float f2 = resFitAlt_wrtMiB2[ii]->GetParameter(3)/(resFitAlt_wrtMiB2[ii]->GetParameter(0)+resFitAlt_wrtMiB2[ii]->GetParameter(3));
@@ -470,7 +501,12 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            }
 
            if(sigma_eff*1000. < 10.) continue;
-           if(iMCP != "MiB2" && iMCP != "Rm2") sigma_eff = sqrt(sigma_eff*sigma_eff-23.E-3*23.E-3);  
+           if(iMCP != "MiB2" && iMCP != "Rm2"){
+              sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtMiB2*sub_wrtMiB2);
+              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtMiB2*sub_wrtMiB2*sub_wrtMiB2_error*sub_wrtMiB2_error)/sigma_eff_sub;
+           }
+           sigma_eff = sigma_eff_sub;
+           s_sigma = s_sigma_sub;
            g_Res_vs_Amp_wrtMiB2->SetPoint(iPoint_MiB2,ampMin[ii]+(ampMin[ii+1]-ampMin[ii])/2,sigma_eff*1000.);
            g_Res_vs_Amp_wrtMiB2->SetPointError(iPoint_MiB2,(ampMin[ii+1]-ampMin[ii])/2,(ampMin[ii+1]-ampMin[ii])/2,s_sigma*1000.,s_sigma*1000.);
 
@@ -509,6 +545,8 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
            float sigma_eff = 0.;
            float s_sigma = 0.;
+           float sigma_eff_sub;
+           float s_sigma_sub;
            if(doDoubleGauss == true){
               float f1 = resFitAlt_wrtRm2[ii]->GetParameter(0)/(resFitAlt_wrtRm2[ii]->GetParameter(0)+resFitAlt_wrtRm2[ii]->GetParameter(3));
               float f2 = resFitAlt_wrtRm2[ii]->GetParameter(3)/(resFitAlt_wrtRm2[ii]->GetParameter(0)+resFitAlt_wrtRm2[ii]->GetParameter(3));
@@ -520,7 +558,12 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            }
 
            if(sigma_eff*1000. < 10.) continue;
-           if(iMCP != "MiB2" && iMCP != "Rm2") sigma_eff = sqrt(sigma_eff*sigma_eff-17.E-3*17.E-3);  
+           if(iMCP != "MiB2" && iMCP != "Rm2"){
+              sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtRm2*sub_wrtRm2);
+              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtRm2*sub_wrtRm2*sub_wrtRm2_error*sub_wrtRm2_error)/sigma_eff_sub;
+           }
+           sigma_eff = sigma_eff_sub;
+           s_sigma = s_sigma_sub;
            g_Res_vs_Amp_wrtRm2->SetPoint(iPoint_Rm2,ampMin[ii]+(ampMin[ii+1]-ampMin[ii])/2.,sigma_eff*1000.);
            g_Res_vs_Amp_wrtRm2->SetPointError(iPoint_Rm2,(ampMin[ii+1]-ampMin[ii])/2,(ampMin[ii+1]-ampMin[ii])/2.,s_sigma*1000.,s_sigma*1000.);
 
@@ -586,7 +629,7 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
    if(doOnlyWrtMiB2 == false) g_Res_vs_Amp_wrtRm2->Write(std::string("TimeResolution_vs_amp_wrtRm2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP).c_str());
    output_ampMax->Close();
 
-   int nBinsROC = 75;
+   int nBinsROC = 5;
    float stepROC = 10.;
 
    /*if(Timing == "LED50") nBinsROC = 60;
@@ -628,6 +671,14 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
     wrtMCP = "";
     if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMiB2";
+
+
+    std::string SelectionDen = "";
+    if(iMCP == "MiB2" || iMCP == "Rm2"){
+      SelectionDen = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax;
+    }else{ 
+      SelectionDen = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax;
+    } 
 
     for(int ii = 0; ii < nBinsROC; ii++)
     {
@@ -687,11 +738,11 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
               s_sigma = resFitAlt_ROC_wrtMiB2[ii]->GetParError(2);
            }
            
-           //std::cout << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(1) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(2) << std::endl;
+           //std::cout << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(1) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(2) << std::endl;
            
            if(1000.*sigma_eff < 10) continue;
-           g_Res_vs_eff_wrtMiB2->SetPoint(iPoint_MiB2,ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0),1000.*sigma_eff);
-           g_Res_vs_eff_wrtMiB2->SetPointError(iPoint_MiB2,ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(1),ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(2),s_sigma*1000.,s_sigma*1000.);
+           g_Res_vs_eff_wrtMiB2->SetPoint(iPoint_MiB2,ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0),1000.*sigma_eff);
+           g_Res_vs_eff_wrtMiB2->SetPointError(iPoint_MiB2,ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(1),ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(2),s_sigma*1000.,s_sigma*1000.);
            iPoint_MiB2++;
 
            points_ROC_wrtMiB2.push_back(1000.*sigma_eff);
@@ -699,11 +750,11 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            if(1000.*sigma_eff<res_min_wrtMiB2){
               res_min_wrtMiB2 = 1000.*sigma_eff;
               amp_max_min_wrtMiB2 = ii*stepROC+thres;
-              efficiency_wrtMin_wrtMiB2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0);
+              efficiency_wrtMin_wrtMiB2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0);
               error_wrtMiB2 = s_sigma*1000.;
            } 
            
-           if(ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0) < efficiency_min_wrtMiB2) efficiency_min_wrtMiB2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0); 
+           if(ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0) < efficiency_min_wrtMiB2) efficiency_min_wrtMiB2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0); 
         }
 
         if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
@@ -738,10 +789,10 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
               s_sigma = resFitAlt_ROC_wrtRm2[ii]->GetParError(2);
            }
            
-           //std::cout << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(1) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(2) << std::endl;
+           //std::cout << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(1) << " " << ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(2) << std::endl;
            if(1000.*sigma_eff < 10) continue; 
-           g_Res_vs_eff_wrtRm2->SetPoint(iPoint_Rm2,ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0),1000.*sigma_eff);
-           g_Res_vs_eff_wrtRm2->SetPointError(iPoint_Rm2,ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(1),ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(2),s_sigma*1000.,s_sigma*1000.);
+           g_Res_vs_eff_wrtRm2->SetPoint(iPoint_Rm2,ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0),1000.*sigma_eff);
+           g_Res_vs_eff_wrtRm2->SetPointError(iPoint_Rm2,ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(1),ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(2),s_sigma*1000.,s_sigma*1000.);
            iPoint_Rm2++;
 
            points_ROC_wrtRm2.push_back(1000.*sigma_eff);
@@ -749,11 +800,11 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            if(1000.*sigma_eff<res_min_wrtRm2){
               res_min_wrtRm2 = 1000.*sigma_eff;
               amp_max_min_wrtRm2 = ii*stepROC+thres;
-              efficiency_wrtMin_wrtRm2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0);
+              efficiency_wrtMin_wrtRm2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0);
               error_wrtRm2 = s_sigma*1000.;
            } 
            
-           if(ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0) < efficiency_min_wrtRm2) efficiency_min_wrtRm2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, Selection9).at(0);
+           if(ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0) < efficiency_min_wrtRm2) efficiency_min_wrtRm2 = ComputeEfficiency(h4, inputs, iMCP, Selection16, SelectionDen).at(0);
         }
     }
 
@@ -883,20 +934,17 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
     std::string Selection1;   
     char Selection2 [1000];
 
-    //if(iMCP == "M25") sprintf (Selection2,(std::string("fabs(time_max[")+iMCP+std::string("]-time[")+iMCP+iTiming+std::string("]-(%f+(%f)*amp_max[")+iMCP+std::string("]))<0.25")).c_str(),Params->at(0),Params->at(1));
     sprintf (Selection2,(std::string("fabs(time_max[")+iMCP+std::string("]-time[")+iMCP+iTiming+std::string("]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])))<0.25")).c_str(),Params->at(0),Params->at(1),Params->at(2));
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection1 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection1 = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection1 = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection1,"0.",false);
       Selection1 = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection1,"0.",false);
-      //Selection1 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection1,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection1 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection1 = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection1,"1",true);
          Selection1 = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection1,"1",true);
-         //Selection1 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection1,"0.",false);
       }else{
          Selection1 = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection1 = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection1,"0.",false);
@@ -904,9 +952,8 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
          Selection1 = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection1,"1",true);
          Selection1 = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection1,"1",true);
          Selection1 = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection1,"1",true);
-         //Selection1 = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection1,"0.",false);
       }   
-    }
+    } 
     std::string Selection3 = Selection1+" && "+Selection2+HodoSelection; 
     
     if(iMCP != "MiB2")
@@ -933,7 +980,9 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        
        TF1* fit_corr1;
        fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,3000.);
-       timingCorrection_wrtMiB2_1->Fit("fit_corr1");
+       fit_corr1->SetParLimits(2,0.,999999999.);
+       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log([2]+x)",0.,3000.);
+       timingCorrection_wrtMiB2_1->Fit("fit_corr1","B");
        if(doScan_Corr == false){
          Params_wrtMiB2->push_back(fit_corr1->GetParameter(0));
          Params_wrtMiB2->push_back(fit_corr1->GetParameter(1));
@@ -971,7 +1020,8 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
     
        TF1* fit_corr1;
        fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,3000.);
-       timingCorrection_wrtRm2_1->Fit("fit_corr1");
+       fit_corr1->SetParLimits(2,0.,999999999.);
+       timingCorrection_wrtRm2_1->Fit("fit_corr1","B");
        if(doScan_Corr == false){
          Params_wrtRm2->push_back(fit_corr1->GetParameter(0));
          Params_wrtRm2->push_back(fit_corr1->GetParameter(1));
@@ -1166,16 +1216,14 @@ void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std:
     if(Timing != "CFD50") iTiming = "+"+Timing;
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
       Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection,"0.",false);
-      //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }else{
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
@@ -1183,11 +1231,12 @@ void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std:
          Selection = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }   
-    }
+    } 
 
     Selection = Selection + HodoSelection;
+
+    std::cout << "Selection = " << Selection << std::endl;
 
     h4->Draw((std::string("time_max[")+iMCP+std::string("]-time[")+iMCP+iTiming+std::string("]:amp_max[")+iMCP+std::string("] >> h2_time_max_vs_amp")).c_str(),Selection.c_str(),"goff");
 
@@ -1207,8 +1256,6 @@ void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std:
     
     h2_time_max_vs_amp->GetYaxis()->SetTitle((std::string("time_max-time[")+iMCP+std::string("] (ns)")).c_str());
     h2_time_max_vs_amp->GetXaxis()->SetTitle((std::string("amp_max[")+iMCP+std::string("] (ns)")).c_str());
-    //h2_time_max_vs_amp->SetAxisRange(0.,1750., "Z");
-    //if(iMCP == "M25") h2_time_max_vs_amp->Fit("pol1_max");
     if(Timing == "CFD50") h2_time_max_vs_amp->Fit("fit_corr_max","B","",20.,3000.);
     else if(Timing == "LED50") h2_time_max_vs_amp->Fit("fit_corr_max","B","",50.,3000.);
     else if(Timing == "LED100") h2_time_max_vs_amp->Fit("fit_corr_max","B","",100.,3000.);
@@ -1224,8 +1271,7 @@ void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std:
     TCanvas* c1 = new TCanvas();
     c1->cd();
     h2_time_max_vs_amp->Draw("COLZ");
-    if(iMCP == "M25") fit_corr_max->Draw("same");
-    else fit_corr_max->Draw("same");
+    fit_corr_max->Draw("same");
     c1 -> Print(std::string("deltaT_max_vs_amp_max_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+wrtMCP+".png").c_str(),"png");
     c1 -> Print(std::string("deltaT_max_vs_amp_max_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+wrtMCP+".pdf").c_str(),"pdf");
 }
@@ -1237,18 +1283,17 @@ void PulseShapes(TTree* h4, std::string iMCP, std::string nameiMCP, std::string 
 
     std::string Selection;
     std::string iTiming = "";
+    //if(Timing != "CFD50") iTiming = "+"+Timing;
   
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
       Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection,"0.",false);
-      //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }else{
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
@@ -1256,9 +1301,8 @@ void PulseShapes(TTree* h4, std::string iMCP, std::string nameiMCP, std::string 
          Selection = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }   
-    }
+    } 
 
     Selection = Selection+" && WF_ch == "+iMCP;//+HodoSelection;
 
@@ -1311,18 +1355,17 @@ void Hodoscope(TTree* h4, std::string iMCP, std::string nameiMCP, std::string th
 
     std::string Selection;
     std::string iTiming = "";
+    //if(Timing != "CFD50") iTiming = "+"+Timing;
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
       Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection,"0.",false);
-      //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }else{
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
@@ -1330,9 +1373,8 @@ void Hodoscope(TTree* h4, std::string iMCP, std::string nameiMCP, std::string th
          Selection = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }   
-    }
+    } 
 
     h4->Draw("Y:X >> h2_hodoscope_Y_vs_X_noSelection");
     h4->Draw("Y:X >> h2_hodoscope_Y_vs_X",Selection.c_str());
@@ -1369,18 +1411,17 @@ void TimeChi2(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thr
 
     std::string Selection;
     std::string iTiming = "";
+    //if(Timing != "CFD50") iTiming = "+"+Timing;
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
       Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection,"0.",false);
-      //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }else{
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
@@ -1388,7 +1429,6 @@ void TimeChi2(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thr
          Selection = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }   
     } 
 
@@ -1424,21 +1464,24 @@ void AmpMax(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thres
 {
     TH1F* h_ampMax_noSelection = new TH1F(std::string("h_ampMax_"+nameiMCP+"_noSelection").c_str(),"",450,0.,4500.);
     TH1F* h_ampMax = new TH1F(std::string("h_ampMax_"+nameiMCP).c_str(),"",450,0.,4500.);
+    TH1F* h_ampMax_2part = new TH1F(std::string("h_ampMax_"+nameiMCP+"_2part").c_str(),"",450,0.,4500.);
+    TH1F* h_ampMax_3part = new TH1F(std::string("h_ampMax_"+nameiMCP+"_3part").c_str(),"",450,0.,4500.);
 
     std::string Selection;
+    std::string Selection_2part;
+    std::string Selection_3part;
     std::string iTiming = "";
+    //if(Timing != "CFD50") iTiming = "+"+Timing;
 
     if(iMCP == "MiB2" || iMCP == "Rm2"){
-      Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
       Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
       Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection,"0.",false);
-      //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
     }else{ 
       if(doOnlyWrtMiB2){
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }else{
          Selection = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
          Selection = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection,"0.",false);
@@ -1446,17 +1489,60 @@ void AmpMax(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thres
          Selection = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
          Selection = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection,"1",true);
-         //Selection = AddSelection(h4,std::string("time_max["+iMCP+"]-time[")+iMCP+iTiming+std::string("]"),Selection,"0.",false);
       }   
-    }
+    } 
+    
+    if(iMCP == "MiB2" || iMCP == "Rm2"){
+      Selection_2part = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>700 && adc_data[scint]<1500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection_2part = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection_2part,"0.",false);
+      Selection_2part = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection_2part,"0.",false);
+    }else{ 
+      if(doOnlyWrtMiB2){
+         Selection_2part = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>700 && adc_data[scint]<1500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+         Selection_2part = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection_2part,"1",true);
+         Selection_2part = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection_2part,"1",true);
+      }else{
+         Selection_2part = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>700 && adc_data[scint]<1500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+         Selection_2part = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection_2part,"0.",false);
+         Selection_2part = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection_2part,"1",true);
+         Selection_2part = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection_2part,"1",true);
+         Selection_2part = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection_2part,"1",true);
+         Selection_2part = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection_2part,"1",true);
+      }   
+    } 
+
+    if(iMCP == "MiB2" || iMCP == "Rm2"){
+      Selection_3part = "amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>1500 && adc_data[scint]<2500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+      Selection_3part = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection_3part,"0.",false);
+      Selection_3part = AddSelection(h4,std::string("time_max[MiB2]-time_max[Rm2]"),Selection_3part,"0.",false);
+    }else{ 
+      if(doOnlyWrtMiB2){
+         Selection_3part = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && adc_data[scint]>1500 && adc_data[scint]<2500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+         Selection_3part = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection_3part,"1",true);
+         Selection_3part = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection_3part,"1",true);
+      }else{
+         Selection_3part = "amp_max["+iMCP+"]>"+thresMCP+" && amp_max["+iMCP+"]<"+maxMCP+" && amp_max[MiB2]>"+amp_max_MiB2+" && fabs(time_max[MiB2])<"+time_max_MiB2+" && amp_max[Rm2]>"+amp_max_Rm2+" && fabs(time_max[Rm2])<"+time_max_Rm2+" && amp_max[Rm2]< 1200 && adc_data[scint]>1500 && adc_data[scint]<2500 && n_hitsX> 0 && n_hitsX<3 && n_hitsY> 0 && n_hitsY<3";
+         Selection_3part = AddSelection(h4,std::string("time[MiB2]-time[Rm2]"),Selection_3part,"0.",false);
+         Selection_3part = AddSelection(h4,std::string("time[MiB2]-time[")+iMCP+iTiming+std::string("]"),Selection_3part,"1",true);
+         Selection_3part = AddSelection(h4,std::string("time[Rm2]-time[")+iMCP+iTiming+std::string("]"),Selection_3part,"1",true);
+         Selection_3part = AddSelection(h4,std::string("time_max[MiB2]-time_max[")+iMCP+std::string("]"),Selection_3part,"1",true);
+         Selection_3part = AddSelection(h4,std::string("time_max[Rm2]-time_max[")+iMCP+std::string("]"),Selection_3part,"1",true);
+      }   
+    } 
 
     h4->Draw(std::string("amp_max["+iMCP+"] >> h_ampMax_"+nameiMCP+"_noSelection").c_str());
     h4->Draw(std::string("amp_max["+iMCP+"] >> h_ampMax_"+nameiMCP).c_str(),Selection.c_str());
+    h4->Draw(std::string("amp_max["+iMCP+"] >> h_ampMax_"+nameiMCP+"_2part").c_str(),Selection_2part.c_str());
+    h4->Draw(std::string("amp_max["+iMCP+"] >> h_ampMax_"+nameiMCP+"_3part").c_str(),Selection_3part.c_str());
     
     h_ampMax_noSelection->GetXaxis()->SetTitle("amp_max");
     h_ampMax->GetXaxis()->SetTitle("amp_max");
+    h_ampMax_2part->GetXaxis()->SetTitle("amp_max");
+    h_ampMax_3part->GetXaxis()->SetTitle("amp_max");
     h_ampMax_noSelection->GetYaxis()->SetTitle("Events");
     h_ampMax->GetYaxis()->SetTitle("Events");
+    h_ampMax_2part->GetYaxis()->SetTitle("Events");
+    h_ampMax_3part->GetYaxis()->SetTitle("Events");
  
     std::string wrtMCP = "";
     if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMIB2";
@@ -1474,6 +1560,20 @@ void AmpMax(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thres
     h_ampMax->Draw("H");
     c2 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+".png").c_str(),"png");
     c2 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+".pdf").c_str(),"pdf");
+
+    TCanvas* c3 = new TCanvas();
+    c3->cd();
+    c3->SetLogy();
+    h_ampMax_2part->Draw("H");
+    c3 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+"_2part.png").c_str(),"png");
+    c3 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+"_2part.pdf").c_str(),"pdf");
+
+    TCanvas* c4 = new TCanvas();
+    c4->cd();
+    c4->SetLogy();
+    h_ampMax_3part->Draw("H");
+    c4 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+"_3part.png").c_str(),"png");
+    c4 -> Print(std::string("ampMax_"+nameiMCP+wrtMCP+"_3part.pdf").c_str(),"pdf");
     
 }   
 
@@ -1493,7 +1593,7 @@ void CheckEfficiency(TTree* h4, std::string inputs, std::string iMCP, std::strin
     else if(iMCP == "BINP2" && inputs.find("2547") == std::string::npos) HV = "HVBINP2";
     else if(iMCP == "BINP3") HV = "HVBINP3";
     else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") != std::string::npos) HV = "HVBINP4NEG";
-    else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") == std::string::npos) HV = "HVBINP4";
+    else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") == std::string::npos) HV = "HVBINP2NEG";
 
 
     h4->Draw(std::string(HV+" >> num").c_str(),std::string("adc_data[scint]>"+scintMin+" && adc_data[scint]<"+scintMax+" && amp_max[MiB2]>20.").c_str());   
@@ -1727,7 +1827,22 @@ void HodoValidation(TTree* h4, TTree* hodo, TTree* adc, int nParticle)
     fiberEnergyMaxY->Draw();
     c2 -> Print("fiberEnergyMaxY.png","png");
     c2 -> Print("fiberEnergyMaxY.pdf","pdf");
-}   
+}  
+
+void CheckSelectionEfficiency(TTree* h4, std::string iMCP, std::string Selection)
+{
+    //std::cout << "String = " << Selection << std::endl;
+    TH1F* h = new TH1F("h","",10000,-99999999.,99999999);
+    std::string splittedSelection = "";
+    h4->Draw(std::string("time["+iMCP+"] >> h").c_str(),splittedSelection.c_str());
+    int Ntot = h->GetEntries();
+    for(unsigned int ii = 0; ii < split(Selection, std::string("&&")).size(); ii++){ 
+        if(ii == 0) splittedSelection = split(Selection, std::string("&&")).at(ii);
+        else splittedSelection = splittedSelection + "&" + split(Selection, std::string("&&")).at(ii);
+        h4->Draw(std::string("time["+iMCP+"] >> h").c_str(),splittedSelection.c_str());
+        std::cout << "Selection = " << splittedSelection << " - " << float(h->GetEntries())/float(Ntot)*100. << "%" << std::endl;
+    }  
+} 
 
 std::string AddSelection(TTree* h4, std::string Var, std::string Selection, std::string Cut = "0.", bool isCut = false)
 {
@@ -1786,7 +1901,7 @@ std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string 
     else if(iMCP == "BINP2" && inputs.find("2547") == std::string::npos) HV = "HVBINP2";
     else if(iMCP == "BINP3") HV = "HVBINP3";
     else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") != std::string::npos) HV = "HVBINP4NEG";
-    else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") == std::string::npos) HV = "HVBINP4";
+    else if((iMCP == "BINP4" || iMCP == "MiB2" || iMCP == "Rm2") && inputs.find("2378") == std::string::npos) HV = "HVBINP2NEG";
 
 
     h4->Draw(std::string(HV+" >> num").c_str(),numSel.c_str());   
@@ -1809,4 +1924,15 @@ std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string 
 
    return finalEff;
 }   
+
+std::vector<std::string> split(const std::string text, std::string sep) {
+  std::vector<std::string> tokens;
+  std::size_t start = 0, end = 0;
+  while ((end = text.find(sep.c_str(), start)) != std::string::npos) {
+    tokens.push_back(text.substr(start, end - start));
+    start = end + 1;
+  }
+  tokens.push_back(text.substr(start));
+  return tokens;
+}
 

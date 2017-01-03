@@ -39,6 +39,7 @@ public:
     float*        b_slope;
     float*        b_rms;
     float*        time;
+    float*        time_mirror;
     float*        time_chi2;
     float*        maximum;
     float*        time_maximum;

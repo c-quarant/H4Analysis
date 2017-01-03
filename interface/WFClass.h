@@ -53,9 +53,9 @@ public:
     inline float           GetTUnit() {return tUnit_;};
     float                  GetAmpMax(int min=-1, int max=-1);
     WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7);
-    pair<float, float>     GetTime(string method, vector<float>& params); 
-    pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
-    pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    pair< pair<float, float>, float>     GetTime(string method, vector<float>& params); 
+    pair< pair<float, float>, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
+    pair< pair<float, float>, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
     float                  GetIntegral(int min=-1, int max=-1);
     float                  GetModIntegral(int min=-1, int max=-1);
     virtual float          GetSignalIntegral(int riseWin, int fallWin);

@@ -103,7 +103,7 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         digiTree_.b_slope[outCh] = baselineInfo.slope;
         digiTree_.b_rms[outCh] = baselineInfo.rms;
         digiTree_.maximum[outCh] = WFs_[channel]->GetAmpMax();
-        digiTree_.time_maximum[outCh] = WFs_[channel]->GetTimeCF(1).first;
+        digiTree_.time_maximum[outCh] = WFs_[channel]->GetTimeCF(1).first.first;
         digiTree_.amp_max[outCh] = interpolAmpMax.ampl;
         digiTree_.time_max[outCh] = interpolAmpMax.time;
         digiTree_.chi2_max[outCh] = interpolAmpMax.chi2;
@@ -117,13 +117,15 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
             //---compute time with selected method or store default value (-99)
             if(timeOpts_.find(channel+"."+timeRecoTypes_[iT]) != timeOpts_.end())
             {
-                pair<float, float> timeInfo = WFs_[channel]->GetTime(timeRecoTypes_[iT], timeOpts_[channel+"."+timeRecoTypes_[iT]]);
-                digiTree_.time[outCh+iT*channelsNames_.size()] = timeInfo.first;
+                pair< pair<float, float>, float> timeInfo = WFs_[channel]->GetTime(timeRecoTypes_[iT], timeOpts_[channel+"."+timeRecoTypes_[iT]]);
+                digiTree_.time[outCh+iT*channelsNames_.size()] = timeInfo.first.first;
+                digiTree_.time_mirror[outCh+iT*channelsNames_.size()] = timeInfo.first.second;
                 digiTree_.time_chi2[outCh+iT*channelsNames_.size()] = timeInfo.second;
             }
             else
             {
                 digiTree_.time[outCh+iT*channelsNames_.size()] = -99;
+                digiTree_.time_mirror[outCh+iT*channelsNames_.size()] = -99;
                 digiTree_.time_chi2[outCh+iT*channelsNames_.size()] = -99;
             }
         }

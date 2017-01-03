@@ -100,11 +100,15 @@ protected:
     float          baseline_;
     float          bRMS_;
     int            cfSample_;
+    int            cfSampleMirror_;
     float          cfFrac_;
     float          cfTime_;
+    float          cfTimeMirror_;
     int            leSample_;
+    int            leSampleMirror_;
     float          leThr_;
     float          leTime_;
+    float          leTimeMirror_;
     float          chi2cf_;
     float          chi2le_;
     int            fWinMin_;

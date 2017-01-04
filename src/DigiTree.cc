@@ -55,7 +55,7 @@ void DigiTree::Init(vector<string>& names, vector<string>& timetypes)
     tree_->Branch((prefix_+"b_slope").c_str(), b_slope, (prefix_+"b_slope["+size_var+"]/F").c_str());
     tree_->Branch((prefix_+"b_rms").c_str(), b_rms, (prefix_+"b_rms["+size_var+"]/F").c_str());
     tree_->Branch((prefix_+"time").c_str(), time, (prefix_+"time["+size_time_var+"]/F").c_str());
-    tree_->Branch((prefix_+"time_mirror").c_str(), time, (prefix_+"time_mirror["+size_time_var+"]/F").c_str());
+    tree_->Branch((prefix_+"time_mirror").c_str(), time_mirror, (prefix_+"time_mirror["+size_time_var+"]/F").c_str());
     tree_->Branch((prefix_+"time_chi2").c_str(), time_chi2, (prefix_+"time_chi2["+size_time_var+"]/F").c_str());
     tree_->Branch((prefix_+"maximum").c_str(), maximum, (prefix_+"maximum["+size_var+"]/F").c_str());
     tree_->Branch((prefix_+"time_maximum").c_str(), time_maximum, (prefix_+"time_maximum["+size_var+"]/F").c_str());

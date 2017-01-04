@@ -76,4 +76,3 @@
 
 #python submitBatch.py -r 4594,4597,4598,4599,4600 -q cmscaf1nd -s root://eoscms.cern.ch//store/group/dpg_ecal/comm_ecal/upgrade/testbeam/TimingTB_T9_Summer2016/ntuples/v2/ -v v2 -c ../cfg/T92016_Ele_Pre_B.cfg --batch lxbatch
 
-

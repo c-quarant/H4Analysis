@@ -15,11 +15,8 @@
 #include <iostream>
 #include <fstream> 
 
-
-//int nBins = 26;
-//float ampMin[27] = {0., 50., 100., 150., 200., 250., 300., 350., 400., 450., 500., 550., 600., 650, 700., 750., 800., 850., 900., 950., 1000., 1250, 1500., 1750., 2000.,2500.,3000.};
-int nBins = 7;
-float ampMin[8] = {0., 400., 800., 1200., 1700., 2000.,2500.,3000.};
+int nBins = 15;
+float ampMin[16] = {0.};
 float timeMin[4001];
 
 //BINP
@@ -30,11 +27,10 @@ std::string amp_max_Rm2 = "200.";
 std::string scintMin = "200.";
 std::string scintMax = "700.";
 std::string timeChi2 = "99999999.";
-bool doScan_Corr = false;
 bool isEfficiencyRun = false;
 
 void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan, bool doScanEff, bool doDoubleGauss, std::string HodoSelection, bool doOnlyWrtMiB2);
-void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan_Corr, std::string HodoSelection, bool doOnlyWrtMiB2);
+void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, std::string HodoSelection, bool doOnlyWrtMiB2);
 void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std::string Timing, std::vector<float>* Params, std::string thresMCP, std::string maxMCP, std::string HodoSelection, bool doOnlyWrtMiB2);
 void PulseShapes(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thresMCP, std::string maxMCP, std::string HodoSelection, bool doOnlyWrtMiB2);
 void Hodoscope(TTree* h4, std::string iMCP, std::string nameiMCP, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2);
@@ -46,6 +42,7 @@ std::string AddSelection(TTree*, std::string, std::string, std::string, bool);
 std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string iMCP, std::string numSel, std::string denSel);
 void CheckSelectionEfficiency(TTree* h4, std::string iMCP, std::string Selection);
 std::vector<std::string> split(const std::string text, std::string sep);
+void setBins(TTree* h4, std::string var, std::string Selection, std::string maxMCP);
 
 void ComputeTiming_oneStep(std::string inputs, std::string iMCP, std::string Timing, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2 = false, bool doFirstStep = true, bool doPulseShapes = false, bool doScan = false, bool doScanEff = false, bool doDoubleGauss = false, std::string hodoXmin="0", std::string hodoXmax="30", std::string hodoYmin="0", std::string hodoYmax="30")
 {
@@ -84,7 +81,7 @@ void ComputeTiming_oneStep(std::string inputs, std::string iMCP, std::string Tim
     }else if(doPulseShapes == true) PulseShapes(h4, iMCP, nameiMCP, thresMCP, maxMCP, HodoSelection, doOnlyWrtMiB2);
     else{
        AmpVsTime_Selection(h4, iMCP, nameiMCP,Timing, Params, thresMCP, maxMCP, HodoSelection, doOnlyWrtMiB2);
-       TimeCorrection(h4, iMCP, nameiMCP,inputFile, Timing, Params, Params_wrtMiB2, Params_wrtRm2, thresMCP, maxMCP, doScan_Corr, HodoSelection, doOnlyWrtMiB2);
+       TimeCorrection(h4, iMCP, nameiMCP,inputFile, Timing, Params, Params_wrtMiB2, Params_wrtRm2, thresMCP, maxMCP, HodoSelection, doOnlyWrtMiB2);
        FinalTiming(h4, inputs, iMCP, nameiMCP, inputFile, Timing, Params, Params_wrtMiB2, Params_wrtRm2, thresMCP, maxMCP, doScan, doScanEff, doDoubleGauss, HodoSelection, doOnlyWrtMiB2);
     }
 }
@@ -117,10 +114,18 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     if(iMCP != "MiB2"){
        sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
        sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
     }
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
        sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
        sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
     }
 
     //no time correction
@@ -308,60 +313,6 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        delete g_res; 
 
     }   
-
-    /*if(iMCP != "MiB2"){
-       if(doDoubleGauss == false) g_res = new TF1("g_res","gaus",time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.1);
-       else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.1);
-       g_res->SetParameters(0,0.,time_wrtMiB2_noCorrection->GetEntries());
-       g_res->SetParameters(1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.2,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.2);
-       g_res->SetParameters(2,0.,1.);
-       if(doDoubleGauss == true) g_res->SetParameters(3,0.,time_wrtMiB2_noCorrection->GetEntries());
-       if(doDoubleGauss == true) g_res->SetParameters(4,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.2,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParameters(5,0.,1.);
-       g_res->SetParLimits(0,0.,time_wrtMiB2_noCorrection->GetEntries());
-       g_res->SetParLimits(1,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.2,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.2);
-       g_res->SetParLimits(2,0.,1.);
-       if(doDoubleGauss == true) g_res->SetParLimits(3,0.,time_wrtMiB2_noCorrection->GetEntries());
-       if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())-0.2,time_wrtMiB2_noCorrection->GetBinCenter(time_wrtMiB2_noCorrection->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParLimits(5,0.,1.);
-       time_wrtMiB2_noCorrection->Fit("g_res","B"); 
-
-       std::string wrtMCP = "";
-       if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMiB2";
-
-       TCanvas* c3 = new TCanvas();
-       c3->cd();
-       time_wrtMiB2_noCorrection->Draw("hist");
-       g_res->Draw("same");
-       c3 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtMiB2_"+Timing+"_thres"+thresMCP+wrtMCP+"_noCorrection.png").c_str(),"png");
-       c3 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtMiB2_"+Timing+"_thres"+thresMCP+wrtMCP+"_noCorrection.pdf").c_str(),"pdf");
-       delete g_res; 
-    }
-    
-    if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
-       g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())-0.1,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())+0.1);
-       g_res->SetParameters(0,0.,time_wrtRm2_noCorrection->GetEntries());
-       g_res->SetParameters(1,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())-0.2,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())+0.2);
-       g_res->SetParameters(2,0.,1.);
-       if(doDoubleGauss == true) g_res->SetParameters(3,0.,time_wrtRm2_noCorrection->GetEntries());
-       if(doDoubleGauss == true) g_res->SetParameters(4,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())-0.2,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParameters(5,0.,1.);
-       g_res->SetParLimits(0,0.,time_wrtRm2_noCorrection->GetEntries());
-       g_res->SetParLimits(1,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())-0.2,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())+0.2);
-       g_res->SetParLimits(2,0.,1.);
-       if(doDoubleGauss == true) g_res->SetParLimits(3,0.,time_wrtRm2_noCorrection->GetEntries());
-       if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())-0.2,time_wrtRm2_noCorrection->GetBinCenter(time_wrtRm2_noCorrection->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParLimits(5,0.,1.);
-       time_wrtRm2_noCorrection->Fit("g_res","B");
-
-       TCanvas* c4 = new TCanvas();
-       c4->cd();
-       time_wrtRm2_noCorrection->Draw("hist");
-       g_res->Draw("same");
-       c4 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtRm2_"+Timing+"_thres"+thresMCP+"_noCorrection.png").c_str(),"png");
-       c4 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtRm2_"+Timing+"_thres"+thresMCP+"_noCorrection.pdf").c_str(),"pdf");
-       delete g_res;
-    }*/
 
     TH2F* time_vs_amp_wrtMiB2_2;
     TH2F* time_vs_amp_wrtRm2_2;
@@ -923,11 +874,8 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
    } 
 }
 
-void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan_Corr, std::string HodoSelection, bool doOnlyWrtMiB2)
+void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, std::string HodoSelection, bool doOnlyWrtMiB2)
 {
-    TH2F* timingCorrection_wrtMiB2 = new TH2F("timingCorrection_wrtMiB2","",nBins,ampMin,4000,timeMin);
-    TH2F* timingCorrection_wrtRm2 = new TH2F("timingCorrection_wrtRm2","",nBins,ampMin,4000,timeMin);
-    
     std::string iTiming = "";
     if(Timing != "CFD50") iTiming = "+"+Timing;
    
@@ -955,7 +903,11 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
       }   
     } 
     std::string Selection3 = Selection1+" && "+Selection2+HodoSelection; 
-    
+
+    setBins(h4, std::string("amp_max["+iMCP+"]"), Selection3, maxMCP);
+    TH2F* timingCorrection_wrtMiB2 = new TH2F("timingCorrection_wrtMiB2","",nBins,ampMin,4000,timeMin);
+    TH2F* timingCorrection_wrtRm2 = new TH2F("timingCorrection_wrtRm2","",nBins,ampMin,4000,timeMin);
+
     if(iMCP != "MiB2")
        h4->Draw((std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]:amp_max[")+iMCP+std::string("] >> timingCorrection_wrtMiB2")).c_str(),Selection3.c_str());
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false)
@@ -979,15 +931,14 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        timingCorrection_wrtMiB2_1->SetLineColor(kBlack);
        
        TF1* fit_corr1;
-       fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,3000.);
+       fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,atof(maxMCP.c_str()));
        fit_corr1->SetParLimits(2,0.,999999999.);
-       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log([2]+x)",0.,3000.);
-       timingCorrection_wrtMiB2_1->Fit("fit_corr1","B");
-       if(doScan_Corr == false){
-         Params_wrtMiB2->push_back(fit_corr1->GetParameter(0));
-         Params_wrtMiB2->push_back(fit_corr1->GetParameter(1));
-         Params_wrtMiB2->push_back(fit_corr1->GetParameter(2));
-       }
+       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log(x+[2])",0.,atof(maxMCP.c_str()));
+       //fit_corr1 = new TF1("fit_corr1","sqrt([0]+[1]*x+[2]*x*x)",0.,atof(maxMCP.c_str()));
+       timingCorrection_wrtMiB2_1->Fit("fit_corr1");
+       Params_wrtMiB2->push_back(fit_corr1->GetParameter(0));
+       Params_wrtMiB2->push_back(fit_corr1->GetParameter(1));
+       Params_wrtMiB2->push_back(fit_corr1->GetParameter(2));
     
        std::string wrtMCP = "";
        if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMiB2";
@@ -1019,14 +970,14 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        timingCorrection_wrtRm2_1->SetLineColor(kBlack);
     
        TF1* fit_corr1;
-       fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,3000.);
-       fit_corr1->SetParLimits(2,0.,999999999.);
-       timingCorrection_wrtRm2_1->Fit("fit_corr1","B");
-       if(doScan_Corr == false){
-         Params_wrtRm2->push_back(fit_corr1->GetParameter(0));
-         Params_wrtRm2->push_back(fit_corr1->GetParameter(1));
-         Params_wrtRm2->push_back(fit_corr1->GetParameter(2));
-       }
+       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,atof(maxMCP.c_str()));
+       //fit_corr1->SetParLimits(2,0.,999999999.);
+       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log(x+[2])",0.,atof(maxMCP.c_str()));
+       fit_corr1 = new TF1("fit_corr1","sqrt([0]+[1]*x+[2]x*x)",0.,atof(maxMCP.c_str()));
+       timingCorrection_wrtRm2_1->Fit("fit_corr1");
+       Params_wrtRm2->push_back(fit_corr1->GetParameter(0));
+       Params_wrtRm2->push_back(fit_corr1->GetParameter(1));
+       Params_wrtRm2->push_back(fit_corr1->GetParameter(2));
     
        TCanvas* c2 = new TCanvas();
        c2->cd();
@@ -1036,171 +987,6 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        c2 -> Print(std::string("timingCorrection_wrtRm2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+".png").c_str(),"png");
        c2 -> Print(std::string("timingCorrection_wrtRm2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+".pdf").c_str(),"pdf");
     }
-      
-    std::vector<TH1F*> resHist_wrtMiB2;
-    resHist_wrtMiB2.resize(nBins);
-    std::vector<TF1*> resFit_wrtMiB2;
-    resFit_wrtMiB2.resize(nBins);
-    std::vector<TF1*> resFitAlt_wrtMiB2;
-    resFitAlt_wrtMiB2.resize(nBins);
-
-    std::vector<TH1F*> resHist_wrtRm2;
-    resHist_wrtRm2.resize(nBins);
-    std::vector<TF1*> resFit_wrtRm2;
-    resFit_wrtRm2.resize(nBins);
-    std::vector<TF1*> resFitAlt_wrtRm2;
-    resFitAlt_wrtRm2.resize(nBins);
-
-    TGraphAsymmErrors* g_Res_vs_Amp_wrtMiB2 = new TGraphAsymmErrors(); 
-    TGraphAsymmErrors* g_Res_vs_Amp_wrtRm2 = new TGraphAsymmErrors(); 
-
-    std::vector<float> points_wrtMiB2;
-    std::vector<float> points_wrtRm2;
-
-    TCanvas* c3;
-    TCanvas* c4;
-
-    if(doScan_Corr == true){
-      for(int ii = 0; ii < nBins; ii++)
-      {
-        char Name_wrtMiB2 [50];
-        sprintf (Name_wrtMiB2,"h_timingCorr_1_%d_wrtMiB2",ii);
-        resHist_wrtMiB2[ii] = new TH1F(Name_wrtMiB2,Name_wrtMiB2,4000,-20.,20.);
-
-        char Name_wrtRm2 [50];
-        sprintf (Name_wrtRm2,"h_timingCorr_1_%d_wrtRm2",ii);
-        resHist_wrtRm2[ii] = new TH1F(Name_wrtRm2,Name_wrtRm2,4000,-20.,20.);
-
-        char cutMin [10];
-        char cutMax [10];
-        sprintf (cutMin,"%f",ampMin[ii]);
-        sprintf (cutMax,"%f",ampMin[ii+1]);
-        
-        std::string Selection4 = Selection3+std::string(" && amp_max[")+iMCP+std::string("]>")+std::string(cutMin)+std::string(" && amp_max[")+iMCP+std::string("]<")+std::string(cutMax);
-        std::string Selection5 = "time["+iMCP+iTiming+"]-time[MiB2] >> "+Name_wrtMiB2; 
-        std::string Selection6 = "time["+iMCP+iTiming+"]-time[Rm2] >> "+Name_wrtRm2; 
-        h4->Draw(Selection5.c_str(),Selection4.c_str());
-        h4->Draw(Selection6.c_str(),Selection4.c_str());
-      
-        char NameOutput_wrtMiB2_png [500];
-        char NameOutput_wrtMiB2_pdf [500];
-        char NameOutput_wrtRm2_png [500];
-        char NameOutput_wrtRm2_pdf [500];
-
-        std::string wrtMCP = "";
-        if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMiB2";
-
-        sprintf (NameOutput_wrtMiB2_png,"timingCorrection_%s_wrtMiB2_%d_%s_thres%s%s.png",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str(),wrtMCP.c_str());
-        sprintf (NameOutput_wrtMiB2_pdf,"timingCorrection_%s_wrtMiB2_%d_%s_thres%s%s.pdf",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str(),wrtMCP.c_str());
-        sprintf (NameOutput_wrtRm2_png,"timingCorrection_%s_wrtRm2_%d_%s_thres%s.png",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str());
-        sprintf (NameOutput_wrtRm2_pdf,"timingCorrection_%s_wrtRm2_%d_%s_thres%s.pdf",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str());
-        
-        if(iMCP != "MiB2"){
-           char NameFitAlt_wrtMiB2 [100];
-           sprintf (NameFitAlt_wrtMiB2,"f_ResAlt_2_%d_wrtMiB2",ii);
-           resFitAlt_wrtMiB2[ii] = new TF1(NameFitAlt_wrtMiB2,"gaus",resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.3,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.3);
-           resFitAlt_wrtMiB2[ii]->SetParameters(1,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
-           resFitAlt_wrtMiB2[ii]->SetParameters(2,0.,2.);
-           resFitAlt_wrtMiB2[ii]->SetParLimits(1,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
-           resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,2.);
-           resHist_wrtMiB2[ii]->Fit(NameFitAlt_wrtMiB2,"B");
-   
-           g_Res_vs_Amp_wrtMiB2->SetPoint(ii,ampMin[ii]+(ampMin[ii+1]-ampMin[ii])/2,resFitAlt_wrtMiB2[ii]->GetParameter(1));
-           g_Res_vs_Amp_wrtMiB2->SetPointError(ii,(ampMin[ii+1]-ampMin[ii])/2,(ampMin[ii+1]-ampMin[ii])/2,resFitAlt_wrtMiB2[ii]->GetParError(1),resFitAlt_wrtMiB2[ii]->GetParError(1));
-
-           points_wrtMiB2.push_back(resFitAlt_wrtMiB2[ii]->GetParameter(1));
-        
-           c3 = new TCanvas();
-           c3->cd();
-           resHist_wrtMiB2[ii]->Draw("hist");
-           resFitAlt_wrtMiB2[ii]->Draw("same");
-           c3 -> Print(NameOutput_wrtMiB2_png,"png");
-           c3 -> Print(NameOutput_wrtMiB2_pdf,"pdf");
-           delete c3;
-        }
-
-        if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
-           char NameFitAlt_wrtRm2 [100];
-           sprintf (NameFitAlt_wrtRm2,"f_ResAlt_2_%d_wrtRm2",ii);
-           resFitAlt_wrtRm2[ii] = new TF1(NameFitAlt_wrtRm2,"gaus",resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.3,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.3);
-           resFitAlt_wrtRm2[ii]->SetParameters(1,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
-           resFitAlt_wrtRm2[ii]->SetParameters(2,0.,2.);
-           resFitAlt_wrtRm2[ii]->SetParLimits(1,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
-           resFitAlt_wrtRm2[ii]->SetParLimits(2,0.,2.);
-           resHist_wrtRm2[ii]->Fit(NameFitAlt_wrtRm2,"B");
-        
-           g_Res_vs_Amp_wrtRm2->SetPoint(ii,ampMin[ii]+(ampMin[ii+1]-ampMin[ii])/2,resFitAlt_wrtRm2[ii]->GetParameter(1));
-           g_Res_vs_Amp_wrtRm2->SetPointError(ii,(ampMin[ii+1]-ampMin[ii])/2,(ampMin[ii+1]-ampMin[ii])/2,resFitAlt_wrtRm2[ii]->GetParError(1),resFitAlt_wrtRm2[ii]->GetParError(1));
-
-           points_wrtRm2.push_back(resFitAlt_wrtRm2[ii]->GetParameter(1));
-        
-           c4 = new TCanvas();
-           c4->cd();
-           resHist_wrtRm2[ii]->Draw("hist");
-           resFitAlt_wrtRm2[ii]->Draw("same");
-           c4 -> Print(NameOutput_wrtRm2_png,"png");
-           c4 -> Print(NameOutput_wrtRm2_pdf,"pdf");
-           delete c4;
-        }
-      }
-
-      std::sort(points_wrtMiB2.begin(),points_wrtMiB2.end());
-      std::sort(points_wrtRm2.begin(),points_wrtRm2.end());
-    
-      if(iMCP != "MiB2"){
-         g_Res_vs_Amp_wrtMiB2->GetXaxis()->SetTitle("amp_max");
-         g_Res_vs_Amp_wrtMiB2->GetYaxis()->SetTitle("#mu (ns)");
-         g_Res_vs_Amp_wrtMiB2->SetMarkerStyle(20);
-         g_Res_vs_Amp_wrtMiB2->SetMarkerSize(0.7);
-         g_Res_vs_Amp_wrtMiB2->SetMarkerColor(kBlack);
-         g_Res_vs_Amp_wrtMiB2->SetLineColor(kBlack);
-         g_Res_vs_Amp_wrtMiB2->GetYaxis()->SetRangeUser(points_wrtRm2.at(0)-0.5,points_wrtMiB2.at(points_wrtMiB2.size()-1)+0.5);
-
-         TF1* fit_corr3;
-         if(iMCP == "M10") fit_corr3 = new TF1("fit_corr3","[0]+[1]*1/(x+[2])",0.,2500.);
-         else fit_corr3 = new TF1("fit_corr3","pol1",0.,2500.);
-         g_Res_vs_Amp_wrtMiB2->Fit("fit_corr3");
-         Params_wrtMiB2->push_back(fit_corr3->GetParameter(0));
-         Params_wrtMiB2->push_back(fit_corr3->GetParameter(1));
-         if(iMCP == "M10")  Params_wrtMiB2->push_back(fit_corr3->GetParameter(2));
-
-         std::string wrtMCP = "";
-         if(doOnlyWrtMiB2) wrtMCP = "_onlyWrtMiB2";
-
-         TCanvas* c5 = new TCanvas();
-         c5->cd();
-         g_Res_vs_Amp_wrtMiB2->Draw("AP");
-         fit_corr3->Draw("same");
-         c5 -> Print(std::string("timingCorrection2_wrtMiB2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+wrtMCP+".png").c_str(),"png");
-         c5 -> Print(std::string("timingCorrection2_wrtMiB2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+wrtMCP+".pdf").c_str(),"pdf");
-      }
-      
-      if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
-         g_Res_vs_Amp_wrtRm2->GetXaxis()->SetTitle("amp_max");
-         g_Res_vs_Amp_wrtRm2->GetYaxis()->SetTitle("#mu(ns)");
-         g_Res_vs_Amp_wrtRm2->SetMarkerStyle(20);
-         g_Res_vs_Amp_wrtRm2->SetMarkerSize(0.7);
-         g_Res_vs_Amp_wrtRm2->SetMarkerColor(kBlack);
-         g_Res_vs_Amp_wrtRm2->SetLineColor(kBlack);
-         g_Res_vs_Amp_wrtRm2->GetYaxis()->SetRangeUser(points_wrtRm2.at(0)-0.5,points_wrtRm2.at(points_wrtRm2.size()-1)+0.5);
-
-         TF1* fit_corr4;
-         if(iMCP == "M10") fit_corr4 = new TF1("fit_corr4","[0]+[1]*1/(x+[2])",0.,2500.);
-         else fit_corr4 = new TF1("fit_corr4","pol1",0.,2500.);
-         g_Res_vs_Amp_wrtRm2->Fit("fit_corr4");
-         Params_wrtRm2->push_back(fit_corr4->GetParameter(0));
-         Params_wrtRm2->push_back(fit_corr4->GetParameter(1));
-         if(iMCP == "M10")  Params_wrtRm2->push_back(fit_corr4->GetParameter(2));
-
-         TCanvas* c6 = new TCanvas();
-         c6->cd();
-         g_Res_vs_Amp_wrtRm2->Draw("AP");
-         fit_corr4->Draw("same");
-         c6 -> Print(std::string("timingCorrection2_wrtRm2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+".png").c_str(),"png");
-         c6 -> Print(std::string("timingCorrection2_wrtRm2_"+nameiMCP+"_"+Timing+"_thres"+thresMCP+".pdf").c_str(),"pdf");
-      }
-    }
-
 }
 
 void AmpVsTime_Selection(TTree* h4, std::string iMCP, std::string nameiMCP, std::string Timing, std::vector<float>* Params, std::string thresMCP, std::string maxMCP, std::string HodoSelection, bool doOnlyWrtMiB2)
@@ -1305,6 +1091,8 @@ void PulseShapes(TTree* h4, std::string iMCP, std::string nameiMCP, std::string 
     } 
 
     Selection = Selection+" && WF_ch == "+iMCP;//+HodoSelection;
+
+    //std::cout << "Selection = " << Selection << std::endl;
 
     h4->Draw((std::string("amp_max[")+iMCP+std::string("]:WF_val/amp_max[")+iMCP+std::string("]:WF_time-time[")+iMCP+std::string("] >> p2D_amp_vs_time")).c_str(),Selection.c_str(),"goff");
     h4->Draw((std::string("WF_val/amp_max[")+iMCP+std::string("]:WF_time-time[")+iMCP+std::string("] >> h2_amp_vs_time")).c_str(),Selection.c_str());
@@ -1924,6 +1712,34 @@ std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string 
 
    return finalEff;
 }   
+
+void setBins(TTree* h4, std::string var, std::string Selection, std::string maxMCP)
+{
+    TH1F* h_var = new TH1F("h_var","",99999,-99999.,99999);
+    
+    h4->Draw(std::string(var+">>h_var").c_str(),Selection.c_str());   
+    int Total_Events = h_var->GetEntries();
+    int nEvents = (float)Total_Events/nBins;
+    
+    float binMax = 0.;
+    float binMin = 0.;
+    for(int ii = 0; ii < nBins; ii++){
+      do{
+        binMax+= 10.; 
+        char min[100];
+        sprintf(min,"%f",binMin);
+        char max[100];
+        sprintf(max,"%f",binMax);
+        h4->Draw(std::string(var+">>h_var").c_str(),std::string(Selection+ " && "+var+">"+min+" && "+var+"<"+max).c_str());  
+        //std::cout << ii << " - binMin " << min << " binMax = " << max << " " << atof(maxMCP.c_str()) << " " << h_var->GetEntries() << " " << nEvents << std::endl;   
+        if(binMax >= atof(maxMCP.c_str())) break; 
+      }while(h_var->GetEntries()<nEvents);
+      ampMin[ii+1] = binMax;
+      binMin = binMax;
+    }
+    for(int ii = 0; ii <= nBins; ii++)
+      std::cout << ii << " " << ampMin[ii] << std::endl;
+}
 
 std::vector<std::string> split(const std::string text, std::string sep) {
   std::vector<std::string> tokens;

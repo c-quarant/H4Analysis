@@ -186,12 +186,14 @@ pair< pair<float, float>, float> WFClass::GetTimeLE(float thr, int nmFitSamples,
         float A=0, B=0;
         chi2le_ = LinearInterpolation(A, B, leSample_-nmFitSamples, leSample_+npFitSamples);
         leTime_ = (leThr_ - A) / B;
-
-        for(int iSample=sWinMax_; iSample>sWinMin_; --iSample)
+       
+        //---find first sample above thr (mirror)
+        for(int iSample=leSample_; iSample<1024; ++iSample)
         {
-            if(samples_.at(iSample) > leThr_) 
+	    if(leSample_ == -1) break;
+            if(samples_.at(iSample) < leThr_) 
             {
-                leSampleMirror_ = iSample;
+                leSampleMirror_ = iSample-1;
                 break;
             }
         }
@@ -199,11 +201,10 @@ pair< pair<float, float>, float> WFClass::GetTimeLE(float thr, int nmFitSamples,
         A=0, B=0;
         float chi2leMirror_ = LinearInterpolation(A, B, leSampleMirror_-nmFitSamples, leSampleMirror_+npFitSamples);
         leTimeMirror_ = (leThr_ - A) / B;
-         
-        //std::cout << sWinMin_ << " " << sWinMax_ << " " << leSample_ << " -> " << leTime_ << " " << leSampleMirror_  << " -> " << leTimeMirror_ << std::endl;  
     }
 
-    return make_pair(make_pair(leTime_, leTimeMirror_), chi2le_);
+    if(leSample_ == -1 && leSampleMirror_ ==-1) return make_pair(make_pair(-1000, -1000), -1);
+    else return make_pair(make_pair(leTime_, leTimeMirror_), chi2le_);
 }
 
 //----------Get the waveform integral in the given range----------------------------------

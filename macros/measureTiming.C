@@ -44,7 +44,7 @@ void CheckSelectionEfficiency(TTree* h4, std::string iMCP, std::string Selection
 std::vector<std::string> split(const std::string text, std::string sep);
 void setBins(TTree* h4, std::string var, std::string Selection, std::string maxMCP);
 
-void ComputeTiming_oneStep(std::string inputs, std::string iMCP, std::string Timing, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2 = false, bool doFirstStep = true, bool doPulseShapes = false, bool doScan = false, bool doScanEff = false, bool doDoubleGauss = false, std::string hodoXmin="0", std::string hodoXmax="30", std::string hodoYmin="0", std::string hodoYmax="30")
+void measureTiming(std::string inputs, std::string iMCP, std::string Timing, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2 = false, bool doFirstStep = true, bool doPulseShapes = false, bool doScan = false, bool doScanEff = false, bool doDoubleGauss = false, std::string hodoXmin="0", std::string hodoXmax="30", std::string hodoYmin="0", std::string hodoYmax="30")
 {
     gStyle->SetOptTitle(0); 
     //gStyle->SetOptStat(1110); 

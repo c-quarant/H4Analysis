@@ -15,8 +15,10 @@
 #include <iostream>
 #include <fstream> 
 
-int nBins = 15;
-float ampMin[16] = {0.};
+//int nBins = 12;
+//float ampMin[13] = {0.};
+int nBins = 8;
+float ampMin[9] = {0.};
 float timeMin[4001];
 
 //BINP
@@ -43,6 +45,7 @@ std::vector<float> ComputeEfficiency(TTree* h4, std::string inputs, std::string 
 void CheckSelectionEfficiency(TTree* h4, std::string iMCP, std::string Selection);
 std::vector<std::string> split(const std::string text, std::string sep);
 void setBins(TTree* h4, std::string var, std::string Selection, std::string maxMCP);
+float UncertaintyFWHM(TF1* f, float integral);
 
 void measureTiming(std::string inputs, std::string iMCP, std::string Timing, std::string thresMCP, std::string maxMCP, bool doOnlyWrtMiB2 = false, bool doFirstStep = true, bool doPulseShapes = false, bool doScan = false, bool doScanEff = false, bool doDoubleGauss = false, std::string hodoXmin="0", std::string hodoXmax="30", std::string hodoYmin="0", std::string hodoYmax="30")
 {
@@ -88,18 +91,22 @@ void measureTiming(std::string inputs, std::string iMCP, std::string Timing, std
 
 void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string nameiMCP, TFile* inputFile, std::string Timing, std::vector<float>* Params, std::vector<float>* Params_wrtMiB2, std::vector<float>* Params_wrtRm2, std::string thresMCP, std::string maxMCP, bool doScan, bool doScanEff, bool doDoubleGauss, std::string HodoSelection, bool doOnlyWrtMiB2)
 {
-    TH1F* time_wrtMiB2 = new TH1F("time_wrtMiB2","",400,-1.,1.);
-    TH1F* time_wrtRm2 = new TH1F("time_wrtRm2","",400,-1.,1.);
+    TH1F* time_wrtMiB2 = new TH1F("time_wrtMiB2","",200,-0.5,0.5);
+    TH1F* time_wrtRm2 = new TH1F("time_wrtRm2","",200,-0.5,0.5);
     TH1F* time_wrtMiB2_noCorrection = new TH1F("time_wrtMiB2_noCorrection","",1600,-10.,10.);
     TH1F* time_wrtRm2_noCorrection = new TH1F("time_wrtRm2_noCorrection","",1600,-10.,10.);
     TH2F* time_vs_amp_wrtMiB2 = new TH2F("time_vs_amp_wrtMiB2","",nBins,ampMin,4000,timeMin);
     TH2F* time_vs_amp_wrtRm2 = new TH2F("time_vs_amp_wrtRm2","",nBins,ampMin,4000,timeMin);
+    TH1F* time_wrtMiB2_FWHM = new TH1F("time_wrtMiB2_FWHM","",2000,-1.,1.);
+    TH1F* time_wrtRm2_FWHM = new TH1F("time_wrtRm2_FWHM","",2000,-1.,1.);
 
     std::string iTiming = "";
     if(Timing != "CFD50") iTiming = "+"+Timing;
 
     //TF1 *g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[1])/[4])^2)",-5.,5.);
     TF1 *g_res;
+    TF1 *g_res_single;
+    TF1 *g_res_double;
 
     char Selection1 [1000];  
     char Selection2 [1000];
@@ -112,20 +119,22 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
     //time correction
     if(iMCP != "MiB2"){
-       sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
-       sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       //sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
        //sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
        //sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
-       //sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
-       //sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       sprintf (Selection2,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*exp((%f)*amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
+       sprintf (Selection3,(std::string("time[")+iMCP+iTiming+std::string("]-time[MiB2]-(%f+(%f)*exp((%f)*amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtMiB2->at(0),Params_wrtMiB2->at(1),Params_wrtMiB2->at(2));
     }
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){
-       sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
-       sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       //sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*1/(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
        //sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
        //sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-(%f+(%f)*log(%f+amp_max[")+iMCP+std::string("])):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
        //sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
        //sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-sqrt((%f)+(%f)*amp_max[")+iMCP+std::string("]+(%f)*amp_max[")+iMCP+std::string("]*amp_max[")+iMCP+std::string("]):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       sprintf (Selection4,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-((%f)+(%f)*amp_max[")+iMCP+std::string("]) >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
+       sprintf (Selection5,(std::string("time[")+iMCP+iTiming+std::string("]-time[Rm2]-((%f)+(%f)*amp_max[")+iMCP+std::string("]):amp_max[")+iMCP+std::string("] >>")).c_str(),Params_wrtRm2->at(0),Params_wrtRm2->at(1),Params_wrtRm2->at(2));
     }
 
     //no time correction
@@ -195,41 +204,95 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     }
 
     if(iMCP != "MiB2"){
-       if(doDoubleGauss == false) g_res = new TF1("g_res","gaus",-1.,1.);
-       else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",-1.,1.);  
+
+       float fwhm;
+       float fwhm_error;
+
+       if(doDoubleGauss == false) g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-3*time_wrtMiB2->GetRMS(),time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+3*time_wrtMiB2->GetRMS());  
+       else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6]",time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-3*time_wrtMiB2->GetRMS(),time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+3*time_wrtMiB2->GetRMS());  
+       if(doDoubleGauss == true) g_res_single = new TF1("g_res_single","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-3*time_wrtMiB2->GetRMS(),time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+3*time_wrtMiB2->GetRMS());
+       if(doDoubleGauss == true) g_res_double = new TF1("g_res_double","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-3*time_wrtMiB2->GetRMS(),time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+3*time_wrtMiB2->GetRMS());
        g_res->SetParameters(0,time_wrtMiB2->GetEntries()/2.);
        g_res->SetParameters(1,0.);
-       g_res->SetParameters(2,0.1);
+       g_res->SetParameters(2,0.04);
+       g_res->SetParameters(3,0.);
        if(doDoubleGauss == true) g_res->SetParameters(3,time_wrtMiB2->GetEntries()/2.);
        if(doDoubleGauss == true) g_res->SetParameters(4,0.);
        if(doDoubleGauss == true) g_res->SetParameters(5,0.1);
+       //if(doDoubleGauss == true) g_res->SetParameters(5,0.2);
+       if(doDoubleGauss == true) g_res->SetParameters(6,0.);
        g_res->SetParLimits(0,0.,time_wrtMiB2->GetEntries());
        g_res->SetParLimits(1,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-0.2,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+0.2);
-       g_res->SetParLimits(2,0.,0.5);
+       g_res->SetParLimits(2,0.,0.2);
+       g_res->SetParLimits(3,0.,10.);
+       //g_res->SetParLimits(2,0.,0.5);
+       //g_res->SetParLimits(3,0.,10.);
+       g_res->SetParLimits(3,0.,time_wrtMiB2->GetEntries());
+       if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-0.2,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+0.2);
+       if(doDoubleGauss == true) g_res->SetParLimits(5,0.04,5.);
+       //if(doDoubleGauss == true) g_res->SetParLimits(5,0.05,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(6,0.,10.);
+       time_wrtMiB2->Fit("g_res","B");
+       g_res->SetParameters(0,g_res->GetParameter(0));
+       g_res->SetParameters(1,g_res->GetParameter(1));
+       g_res->SetParameters(2,g_res->GetParameter(2));
+       g_res->SetParameters(3,g_res->GetParameter(3));
+       if(doDoubleGauss == true) g_res->SetParameters(4,g_res->GetParameter(4));
+       if(doDoubleGauss == true) g_res->SetParameters(5,g_res->GetParameter(5));
+       if(doDoubleGauss == true) g_res->SetParameters(6,g_res->GetParameter(6));
+       g_res->SetParLimits(0,0.,time_wrtMiB2->GetEntries());
+       g_res->SetParLimits(1,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-0.2,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+0.2);
+       g_res->SetParLimits(2,0.,0.2);
+       g_res->SetParLimits(3,0.,10.);
        if(doDoubleGauss == true) g_res->SetParLimits(3,0.,time_wrtMiB2->GetEntries());
        if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())-0.2,time_wrtMiB2->GetBinCenter(time_wrtMiB2->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParLimits(5,0.,0.5);
-       time_wrtMiB2->Fit("g_res","B"); 
-       
+       if(doDoubleGauss == true) g_res->SetParLimits(5,0.04,5.);
+       //if(doDoubleGauss == true) g_res->SetParLimits(5,0.05,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(6,0.,10.);
+       time_wrtMiB2->Fit("g_res","B");
+     
+       if(doDoubleGauss == true){
+          g_res_single->FixParameter(0,g_res->GetParameter(0));
+          g_res_single->FixParameter(1,g_res->GetParameter(1));
+          g_res_single->FixParameter(2,g_res->GetParameter(2));
+          g_res_single->FixParameter(3,g_res->GetParameter(6));
+          g_res_single->SetLineColor(kBlue+1);
+
+          g_res_double->FixParameter(0,g_res->GetParameter(3));
+          g_res_double->FixParameter(1,g_res->GetParameter(4));
+          g_res_double->FixParameter(2,g_res->GetParameter(5));
+          g_res_double->FixParameter(3,g_res->GetParameter(6));
+          g_res_double->SetLineColor(kGreen+1);
+
+          time_wrtMiB2_FWHM->FillRandom("g_res",100000);
+          int bin1 = time_wrtMiB2_FWHM->FindFirstBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+          int bin2 = time_wrtMiB2_FWHM->FindLastBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+          fwhm = time_wrtMiB2_FWHM->GetBinCenter(bin2) - time_wrtMiB2_FWHM->GetBinCenter(bin1);
+          fwhm_error = UncertaintyFWHM(g_res, g_res->Integral(-5,5))/(2*sqrt(2*log(2)));
+       }
+
        char Sigma[100];
        TLatex *latexLabel = new TLatex();
        float sigma_eff;
        float s_sigma;
        float sigma_eff_sub;
        float s_sigma_sub;
+       //float sub_wrtMiB2 = 24.E-3;
+       //float sub_wrtMiB2_error = 2.E-3;
+
+       sigma_eff = g_res->GetParameter(2);
+       s_sigma = g_res->GetParError(2);
        if(doDoubleGauss == true){
-          float f1 = g_res->GetParameter(0)/(g_res->GetParameter(0)+g_res->GetParameter(3));
-          float f2 = g_res->GetParameter(3)/(g_res->GetParameter(0)+g_res->GetParameter(3));
-          sigma_eff = sqrt(f1*g_res->GetParameter(2)*g_res->GetParameter(2)+f2*g_res->GetParameter(5)*g_res->GetParameter(5) + f1*g_res->GetParameter(1)*g_res->GetParameter(1)+f2*g_res->GetParameter(4)*g_res->GetParameter(4) - (f1*g_res->GetParameter(1)+f2*g_res->GetParameter(4))*(f1*g_res->GetParameter(1)+f2*g_res->GetParameter(4)));
-          s_sigma = sqrt((f1*f1*g_res->GetParameter(2)*g_res->GetParameter(2)*g_res->GetParError(2)*g_res->GetParError(2)+f2*f2*g_res->GetParameter(4)*g_res->GetParameter(4)*g_res->GetParError(4)*g_res->GetParError(4)/(sigma_eff*sigma_eff))); 
-       }else{
-           sigma_eff = g_res->GetParameter(2); 
-           s_sigma = g_res->GetParError(2);
+          sigma_eff = fwhm/(2.*sqrt(2*log(2)));
+          s_sigma = g_res->GetParError(2);
        }
 
        if(iMCP != "MiB2" && iMCP != "Rm2"){
           sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtMiB2*sub_wrtMiB2);
           s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtMiB2*sub_wrtMiB2*sub_wrtMiB2_error*sub_wrtMiB2_error)/sigma_eff_sub;
+       }else{
+          sigma_eff_sub = sigma_eff; 
+          s_sigma_sub = s_sigma;
        }
        sigma_eff = sigma_eff_sub;
        s_sigma = s_sigma_sub;
@@ -248,7 +311,9 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        TCanvas* c1 = new TCanvas();
        c1->cd();
        time_wrtMiB2->Draw("hist");
-       latexLabel->DrawLatex(0.72, 0.55,Sigma);
+       latexLabel->DrawLatex(0.72, 0.45,Sigma);
+       if(doDoubleGauss == true) g_res_single->Draw("same");
+       if(doDoubleGauss == true) g_res_double->Draw("same");
        g_res->Draw("same");
        c1 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtMiB2_"+Timing+"_thres"+thresMCP+wrtMCP+".png").c_str(),"png");
        c1 -> Print(std::string("TimeResolution_"+nameiMCP+"_wrtMiB2_"+Timing+"_thres"+thresMCP+wrtMCP+".pdf").c_str(),"pdf");
@@ -256,41 +321,100 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     }
 
     if(iMCP != "Rm2" && doOnlyWrtMiB2 == false){ 
-       if(doDoubleGauss == false) g_res = new TF1("g_res","gaus",-1.,1.);
-       else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",-1.,1.);
+       
+       float fwhm;
+       float fwhm_error;
+
+       if(doDoubleGauss == false) g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-3*time_wrtRm2->GetRMS(),time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+3*time_wrtRm2->GetRMS());  
+       else g_res = new TF1("g_res","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6]",time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-3*time_wrtRm2->GetRMS(),time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+3*time_wrtRm2->GetRMS());  
+       if(doDoubleGauss == true) g_res_single = new TF1("g_res_single","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-3*time_wrtRm2->GetRMS(),time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+3*time_wrtRm2->GetRMS());
+       if(doDoubleGauss == true) g_res_double = new TF1("g_res_double","[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-3*time_wrtRm2->GetRMS(),time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+3*time_wrtRm2->GetRMS());
        g_res->SetParameters(0,time_wrtRm2->GetEntries()/2.);
        g_res->SetParameters(1,0.);
-       g_res->SetParameters(2,0.1);
+       g_res->SetParameters(2,0.04);
+       g_res->SetParameters(3,0.);
+       
        if(doDoubleGauss == true) g_res->SetParameters(3,time_wrtRm2->GetEntries()/2.);
        if(doDoubleGauss == true) g_res->SetParameters(4,0.);
-       if(doDoubleGauss == true) g_res->SetParameters(5,0.1);
+       //if(doDoubleGauss == true) g_res->SetParameters(5,0.1);
+       if(doDoubleGauss == true) g_res->SetParameters(5,0.2);
+       if(doDoubleGauss == true) g_res->SetParameters(6,0.);
        g_res->SetParLimits(0,0.,time_wrtRm2->GetEntries());
        g_res->SetParLimits(1,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-0.2,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+0.2);
-       g_res->SetParLimits(2,0.,0.5);
+       g_res->SetParLimits(2,0.,0.2);
+       g_res->SetParLimits(3,0.,10.);
+       //g_res->SetParLimits(2,0.,0.5);
+       //g_res->SetParLimits(3,0.,10.);
+       g_res->SetParLimits(3,0.,time_wrtRm2->GetEntries());
+       if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-0.2,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+0.2);
+       //if(doDoubleGauss == true) g_res->SetParLimits(5,0.04,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(5,0.05,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(6,0.,10.);
+       
+       time_wrtRm2->Fit("g_res","B");
+       
+       g_res->SetParameters(0,g_res->GetParameter(0));
+       g_res->SetParameters(1,g_res->GetParameter(1));
+       g_res->SetParameters(2,g_res->GetParameter(2));
+       g_res->SetParameters(3,g_res->GetParameter(3));
+       if(doDoubleGauss == true) g_res->SetParameters(4,g_res->GetParameter(4));
+       if(doDoubleGauss == true) g_res->SetParameters(5,g_res->GetParameter(5));
+       if(doDoubleGauss == true) g_res->SetParameters(6,g_res->GetParameter(6));
+       
+       g_res->SetParLimits(0,0.,time_wrtRm2->GetEntries());
+       g_res->SetParLimits(1,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-0.2,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+0.2);
+       g_res->SetParLimits(2,0.,0.2);
+       g_res->SetParLimits(3,0.,10.);
        if(doDoubleGauss == true) g_res->SetParLimits(3,0.,time_wrtRm2->GetEntries());
        if(doDoubleGauss == true) g_res->SetParLimits(4,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())-0.2,time_wrtRm2->GetBinCenter(time_wrtRm2->GetMaximumBin())+0.2);
-       if(doDoubleGauss == true) g_res->SetParLimits(5,0.,0.5);
-       time_wrtRm2->Fit("g_res","B"); 
+       //if(doDoubleGauss == true) g_res->SetParLimits(5,0.04,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(5,0.05,5.);
+       if(doDoubleGauss == true) g_res->SetParLimits(6,0.,10.);
+       time_wrtRm2->Fit("g_res","B");
+       
+       if(doDoubleGauss == true){
+           g_res_single->FixParameter(0,g_res->GetParameter(0));
+           g_res_single->FixParameter(1,g_res->GetParameter(1));
+           g_res_single->FixParameter(2,g_res->GetParameter(2));
+           g_res_single->FixParameter(3,g_res->GetParameter(6));
+           g_res_single->SetLineColor(kBlue+1);
+          
+           g_res_double->FixParameter(0,g_res->GetParameter(3));
+           g_res_double->FixParameter(1,g_res->GetParameter(4));
+           g_res_double->FixParameter(2,g_res->GetParameter(5));
+           g_res_double->FixParameter(3,g_res->GetParameter(6));
+           g_res_double->SetLineColor(kGreen+1);
+       
+          time_wrtRm2_FWHM->FillRandom("g_res",100000);
+          int bin1 = time_wrtRm2_FWHM->FindFirstBinAbove(time_wrtRm2_FWHM->GetMaximum()/2);
+          int bin2 = time_wrtRm2_FWHM->FindLastBinAbove(time_wrtRm2_FWHM->GetMaximum()/2);
+          fwhm = time_wrtRm2_FWHM->GetBinCenter(bin2) - time_wrtRm2_FWHM->GetBinCenter(bin1);
+          fwhm_error = UncertaintyFWHM(g_res, g_res->Integral(-5,5))/(2*sqrt(2*log(2)));
+       }
        
        char Sigma[100];
        TLatex *latexLabel = new TLatex();
        float sigma_eff;
-       float s_sigma; 
+       float s_sigma;
        float sigma_eff_sub;
        float s_sigma_sub;
+       //float sub_wrtRm2 = 24.E-3;
+       //float sub_wrtRm2_error = 2.E-3;
+
+       sigma_eff = g_res->GetParameter(2);
+       s_sigma = g_res->GetParError(2);
+
        if(doDoubleGauss == true){
-          float f1 = g_res->GetParameter(0)/(g_res->GetParameter(0)+g_res->GetParameter(3));
-          float f2 = g_res->GetParameter(3)/(g_res->GetParameter(0)+g_res->GetParameter(3));
-          sigma_eff = sqrt(f1*g_res->GetParameter(2)*g_res->GetParameter(2)+f2*g_res->GetParameter(5)*g_res->GetParameter(5) + f1*g_res->GetParameter(1)*g_res->GetParameter(1)+f2*g_res->GetParameter(4)*g_res->GetParameter(4) - (f1*g_res->GetParameter(1)+f2*g_res->GetParameter(4))*(f1*g_res->GetParameter(1)+f2*g_res->GetParameter(4)));
-          s_sigma = sqrt((f1*f1*g_res->GetParameter(2)*g_res->GetParameter(2)*g_res->GetParError(2)*g_res->GetParError(2)+f2*f2*g_res->GetParameter(4)*g_res->GetParameter(4)*g_res->GetParError(4)*g_res->GetParError(4)/(sigma_eff*sigma_eff)));
-       }else{
-           sigma_eff = g_res->GetParameter(2); 
-           s_sigma = g_res->GetParError(2);
+          sigma_eff = fwhm/(2.*sqrt(2*log(2)));
+          s_sigma = g_res->GetParError(2);
        }
 
-       if(iMCP != "MiB2" && iMCP != "Rm2"){
+       if(iMCP != "Rm2" && iMCP != "MiB2"){
           sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtRm2*sub_wrtRm2);
           s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtRm2*sub_wrtRm2*sub_wrtRm2_error*sub_wrtRm2_error)/sigma_eff_sub;
+       }else{
+          sigma_eff_sub = sigma_eff; 
+          s_sigma_sub = s_sigma;
        }
        sigma_eff = sigma_eff_sub;
        s_sigma = s_sigma_sub;
@@ -302,7 +426,7 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
        latexLabel->SetTextFont(42); // helvetica
 
        time_wrtRm2->GetXaxis()->SetTitle("t-t_{ref} (ns)");
-        
+       
        TCanvas* c2 = new TCanvas();
        c2->cd();
        time_wrtRm2->Draw("hist");
@@ -387,11 +511,11 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
     {
         char Name_wrtMiB2 [50];
         sprintf (Name_wrtMiB2,"h_Res_1_%d_wrtMiB2",ii);
-        resHist_wrtMiB2[ii] = new TH1F(Name_wrtMiB2,Name_wrtMiB2,400,-2.,2.);
+        resHist_wrtMiB2[ii] = new TH1F(Name_wrtMiB2,Name_wrtMiB2,100,-0.5,0.5);
 
         char Name_wrtRm2 [50];
         sprintf (Name_wrtRm2,"h_Res_1_%d_wrtRm2",ii);
-        resHist_wrtRm2[ii] = new TH1F(Name_wrtRm2,Name_wrtRm2,400,-2.,2.);
+        resHist_wrtRm2[ii] = new TH1F(Name_wrtRm2,Name_wrtRm2,100,-0.5,0.5);
 
         char cutMin [10];
         char cutMax [10];
@@ -417,47 +541,70 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
         sprintf (NameOutput_wrtRm2_png,"TimeResolution_%s_wrtRm2_%d_%s_thres%s.png",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str());
         sprintf (NameOutput_wrtRm2_pdf,"TimeResolution_%s_wrtRm2_%d_%s_thres%s.pdf",nameiMCP.c_str(),ii+1,Timing.c_str(),thresMCP.c_str());
          
+        doDoubleGauss = false; 
+        
         if(iMCP != "MiB2"){
            h4->Draw(Selection17.c_str(),Selection16.c_str()); 
            char NameFitAlt_wrtMiB2 [100];
            sprintf (NameFitAlt_wrtMiB2,"f_ResAlt_2_%d_wrtMiB2",ii);
-           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii] = new TF1(NameFitAlt_wrtMiB2,"[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)",resHist_wrtMiB2[ii]->GetMean()-3*resHist_wrtMiB2[ii]->GetRMS(),resHist_wrtMiB2[ii]->GetMean()+3*resHist_wrtMiB2[ii]->GetRMS());
-           else resFitAlt_wrtMiB2[ii] = new TF1(NameFitAlt_wrtMiB2,"gaus",resHist_wrtMiB2[ii]->GetMean()-3*resHist_wrtMiB2[ii]->GetRMS(),resHist_wrtMiB2[ii]->GetMean()+3*resHist_wrtMiB2[ii]->GetRMS());
-           resFitAlt_wrtMiB2[ii]->SetParameters(0,resHist_wrtMiB2[ii]->GetEntries()/2);
+           if(doDoubleGauss == false) resFitAlt_wrtMiB2[ii] = new TF1(NameFitAlt_wrtMiB2,"[0]*exp(-0.5*((x-[1])/[2])^2)+[3]",resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-3*resHist_wrtMiB2[ii]->GetRMS(),resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+3*resHist_wrtMiB2[ii]->GetRMS()); 
+           else resFitAlt_wrtMiB2[ii] = new TF1(NameFitAlt_wrtMiB2,"[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6]",resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-5*resHist_wrtMiB2[ii]->GetRMS(),resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+5*resHist_wrtMiB2[ii]->GetRMS());  
+           resFitAlt_wrtMiB2[ii]->SetParameters(0,resHist_wrtMiB2[ii]->GetEntries()/2.);
            resFitAlt_wrtMiB2[ii]->SetParameters(1,0.);
-           resFitAlt_wrtMiB2[ii]->SetParameters(2,0.5);
+           if(doDoubleGauss == false) resFitAlt_wrtMiB2[ii]->SetParameters(2,0.04); 
+           else resFitAlt_wrtMiB2[ii]->SetParameters(2,0.04);
+           //else resFitAlt_wrtMiB2[ii]->SetParameters(2,0.1);
+           resFitAlt_wrtMiB2[ii]->SetParameters(3,0.); 
            if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(3,resHist_wrtMiB2[ii]->GetEntries()/2.);
-           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(1,0.);
-           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(5,0.5);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(4,0.);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(5,0.1); 
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(6,0.); 
            resFitAlt_wrtMiB2[ii]->SetParLimits(0,0.,resHist_wrtMiB2[ii]->GetEntries());
            resFitAlt_wrtMiB2[ii]->SetParLimits(1,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
-           resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,1.);
+           if(doDoubleGauss == false) resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,0.3); 
+           else resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,0.5);
+           resFitAlt_wrtMiB2[ii]->SetParLimits(3,0.,10.);
            if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(3,0.,resHist_wrtMiB2[ii]->GetEntries());
            if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(4,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
-           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(5,0.,1.);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(5,0.06,5.);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(6,0.,10.);
+           resHist_wrtMiB2[ii]->Fit(NameFitAlt_wrtMiB2,"B");
+           resFitAlt_wrtMiB2[ii]->SetParameters(0,resFitAlt_wrtMiB2[ii]->GetParameter(0));
+           resFitAlt_wrtMiB2[ii]->SetParameters(1,resFitAlt_wrtMiB2[ii]->GetParameter(1));
+           resFitAlt_wrtMiB2[ii]->SetParameters(2,resFitAlt_wrtMiB2[ii]->GetParameter(2));
+           resFitAlt_wrtMiB2[ii]->SetParameters(3,resFitAlt_wrtMiB2[ii]->GetParameter(3));
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(4,resFitAlt_wrtMiB2[ii]->GetParameter(4));
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(5,resFitAlt_wrtMiB2[ii]->GetParameter(5)); 
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParameters(6,resFitAlt_wrtMiB2[ii]->GetParameter(6)); 
+           resFitAlt_wrtMiB2[ii]->SetParLimits(0,0.,resHist_wrtMiB2[ii]->GetEntries());
+           resFitAlt_wrtMiB2[ii]->SetParLimits(1,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
+           if(doDoubleGauss == false) resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,1.);
+           else resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,0.3);
+           //else resFitAlt_wrtMiB2[ii]->SetParLimits(2,0.,0.5);
+           resFitAlt_wrtMiB2[ii]->SetParLimits(3,0.,10.);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(3,0.,resHist_wrtMiB2[ii]->GetEntries());
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(4,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())-0.2,resHist_wrtMiB2[ii]->GetBinCenter(resHist_wrtMiB2[ii]->GetMaximumBin())+0.2);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(5,0.06,5.);
+           if(doDoubleGauss == true) resFitAlt_wrtMiB2[ii]->SetParLimits(6,0.,10.);
            resHist_wrtMiB2[ii]->Fit(NameFitAlt_wrtMiB2,"B");
 
-           float sigma_eff = 0.;
-           float s_sigma = 0.;
+           float sigma_eff = resFitAlt_wrtMiB2[ii]->GetParameter(2);
+           float s_sigma = resFitAlt_wrtMiB2[ii]->GetParError(2);
            float sigma_eff_sub;
            float s_sigma_sub;
-           if(doDoubleGauss == true){
-              float f1 = resFitAlt_wrtMiB2[ii]->GetParameter(0)/(resFitAlt_wrtMiB2[ii]->GetParameter(0)+resFitAlt_wrtMiB2[ii]->GetParameter(3));
-              float f2 = resFitAlt_wrtMiB2[ii]->GetParameter(3)/(resFitAlt_wrtMiB2[ii]->GetParameter(0)+resFitAlt_wrtMiB2[ii]->GetParameter(3));
-              sigma_eff = sqrt(f1*resFitAlt_wrtMiB2[ii]->GetParameter(2)*resFitAlt_wrtMiB2[ii]->GetParameter(2)+f2*resFitAlt_wrtMiB2[ii]->GetParameter(5)*resFitAlt_wrtMiB2[ii]->GetParameter(5) + f1*resFitAlt_wrtMiB2[ii]->GetParameter(1)*resFitAlt_wrtMiB2[ii]->GetParameter(1)+f2*resFitAlt_wrtMiB2[ii]->GetParameter(4)*resFitAlt_wrtMiB2[ii]->GetParameter(4) - (f1*resFitAlt_wrtMiB2[ii]->GetParameter(1)+f2*resFitAlt_wrtMiB2[ii]->GetParameter(4))*(f1*resFitAlt_wrtMiB2[ii]->GetParameter(1)+f2*resFitAlt_wrtMiB2[ii]->GetParameter(4)));
-              s_sigma = sqrt((f1*f1*resFitAlt_wrtMiB2[ii]->GetParameter(2)*resFitAlt_wrtMiB2[ii]->GetParameter(2)*resFitAlt_wrtMiB2[ii]->GetParError(2)*resFitAlt_wrtMiB2[ii]->GetParError(2)+f2*f2*resFitAlt_wrtMiB2[ii]->GetParameter(4)*resFitAlt_wrtMiB2[ii]->GetParameter(4)*resFitAlt_wrtMiB2[ii]->GetParError(4)*resFitAlt_wrtMiB2[ii]->GetParError(4)/(sigma_eff*sigma_eff)));
+    
+           if(iMCP != "MiB2"){
+              sigma_eff_sub = sqrt(sigma_eff*sigma_eff - sub_wrtMiB2*sub_wrtMiB2);
+              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma + sub_wrtMiB2*sub_wrtMiB2*sub_wrtMiB2_error*sub_wrtMiB2_error)/sigma_eff_sub;
+              if(sigma_eff < sub_wrtMiB2) sigma_eff_sub = 0.;
            }else{
-              sigma_eff = resFitAlt_wrtMiB2[ii]->GetParameter(2);
-              s_sigma = resFitAlt_wrtMiB2[ii]->GetParError(2);
-           }
-
-           if(sigma_eff*1000. < 10.) continue;
-           if(iMCP != "MiB2" && iMCP != "Rm2"){
-              sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtMiB2*sub_wrtMiB2);
-              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtMiB2*sub_wrtMiB2*sub_wrtMiB2_error*sub_wrtMiB2_error)/sigma_eff_sub;
+              sigma_eff_sub = sigma_eff;
+              s_sigma_sub = s_sigma;
            }
            sigma_eff = sigma_eff_sub;
            s_sigma = s_sigma_sub;
+          
+           if(sigma_eff_sub*1000 < 10) continue;
            g_Res_vs_Amp_wrtMiB2->SetPoint(iPoint_MiB2,ampMin[ii]+(ampMin[ii+1]-ampMin[ii])/2,sigma_eff*1000.);
            g_Res_vs_Amp_wrtMiB2->SetPointError(iPoint_MiB2,(ampMin[ii+1]-ampMin[ii])/2,(ampMin[ii+1]-ampMin[ii])/2,s_sigma*1000.,s_sigma*1000.);
 
@@ -465,9 +612,20 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
 
            points_wrtMiB2.push_back(sigma_eff*1000.);
         
+           char Sigma[100];
+           sprintf (Sigma,"#sigma = %.0f+/-%.0f ps",sigma_eff*1000.,s_sigma*1000.);
+
+           TLatex *latexLabel = new TLatex();
+           latexLabel->SetTextSize(0.05);
+           latexLabel->SetNDC();
+           latexLabel->SetTextFont(42); // helvetica
+
+           resHist_wrtMiB2[ii]->GetXaxis()->SetTitle("t-t_{ref} (ns)");
+
            TCanvas* c2 = new TCanvas();
            c2->cd();
            resHist_wrtMiB2[ii]->Draw("hist");
+           latexLabel->DrawLatex(0.72, 0.55,Sigma);
            resFitAlt_wrtMiB2[ii]->Draw("same");
            c2 -> Print(NameOutput_wrtMiB2_png,"png");
            c2 -> Print(NameOutput_wrtMiB2_pdf,"pdf");
@@ -478,40 +636,50 @@ void FinalTiming(TTree* h4, std::string inputs, std::string iMCP, std::string na
            h4->Draw(Selection18.c_str(),Selection16.c_str()); 
            char NameFitAlt_wrtRm2 [100];
            sprintf (NameFitAlt_wrtRm2,"f_ResAlt_2_%d_wrtRm2",ii);
-           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii] = new TF1(NameFitAlt_wrtRm2,"[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[1])/[4])^2)",resHist_wrtRm2[ii]->GetMean()-3.*resHist_wrtRm2[ii]->GetRMS(),resHist_wrtRm2[ii]->GetMean()+3.*resHist_wrtRm2[ii]->GetRMS());
-           else resFitAlt_wrtRm2[ii] = new TF1(NameFitAlt_wrtRm2,"gaus",resHist_wrtRm2[ii]->GetMean()-3.*resHist_wrtRm2[ii]->GetRMS(),resHist_wrtRm2[ii]->GetMean()+3.*resHist_wrtRm2[ii]->GetRMS());
+           if(doDoubleGauss == false) resFitAlt_wrtRm2[ii] = new TF1(NameFitAlt_wrtRm2,"gaus",resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-3*resHist_wrtRm2[ii]->GetRMS(),resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+3*resHist_wrtRm2[ii]->GetRMS()); 
+           else resFitAlt_wrtRm2[ii] = new TF1(NameFitAlt_wrtRm2,"[0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6]",resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-3*resHist_wrtRm2[ii]->GetRMS(),resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+3*resHist_wrtRm2[ii]->GetRMS());  
            resFitAlt_wrtRm2[ii]->SetParameters(0,resHist_wrtRm2[ii]->GetEntries()/2.);
            resFitAlt_wrtRm2[ii]->SetParameters(1,0.);
-           resFitAlt_wrtRm2[ii]->SetParameters(2,0.05);
+           resFitAlt_wrtRm2[ii]->SetParameters(2,0.04);
            if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(3,resHist_wrtRm2[ii]->GetEntries()/2.);
-           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(1,0.);
-           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(5,0.05);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(4,0.);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(5,0.1); 
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(6,0.); 
            resFitAlt_wrtRm2[ii]->SetParLimits(0,0.,resHist_wrtRm2[ii]->GetEntries());
            resFitAlt_wrtRm2[ii]->SetParLimits(1,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
            resFitAlt_wrtRm2[ii]->SetParLimits(2,0.,0.5);
            if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(3,0.,resHist_wrtRm2[ii]->GetEntries());
            if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(4,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
-           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(5,0.,0.5);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(5,0.1,5.);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(6,0.,10.);
+           resHist_wrtRm2[ii]->Fit(NameFitAlt_wrtRm2,"B");
+           resFitAlt_wrtRm2[ii]->SetParameters(0,resFitAlt_wrtRm2[ii]->GetParameter(0));
+           resFitAlt_wrtRm2[ii]->SetParameters(1,resFitAlt_wrtRm2[ii]->GetParameter(1));
+           resFitAlt_wrtRm2[ii]->SetParameters(2,resFitAlt_wrtRm2[ii]->GetParameter(2));
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(3,resFitAlt_wrtRm2[ii]->GetParameter(3));
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(4,resFitAlt_wrtRm2[ii]->GetParameter(4));
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(5,resFitAlt_wrtRm2[ii]->GetParameter(5)); 
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParameters(6,resFitAlt_wrtRm2[ii]->GetParameter(6)); 
+           resFitAlt_wrtRm2[ii]->SetParLimits(0,0.,resHist_wrtRm2[ii]->GetEntries());
+           resFitAlt_wrtRm2[ii]->SetParLimits(1,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
+           resFitAlt_wrtRm2[ii]->SetParLimits(2,0.,0.5);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(3,0.,resHist_wrtRm2[ii]->GetEntries());
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(4,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())-0.2,resHist_wrtRm2[ii]->GetBinCenter(resHist_wrtRm2[ii]->GetMaximumBin())+0.2);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(5,0.1,5.);
+           if(doDoubleGauss == true) resFitAlt_wrtRm2[ii]->SetParLimits(6,0.,10.);
            resHist_wrtRm2[ii]->Fit(NameFitAlt_wrtRm2,"B");
 
-           float sigma_eff = 0.;
-           float s_sigma = 0.;
+           float sigma_eff = resFitAlt_wrtRm2[ii]->GetParameter(2);
+           float s_sigma = resFitAlt_wrtRm2[ii]->GetParError(2);
            float sigma_eff_sub;
            float s_sigma_sub;
-           if(doDoubleGauss == true){
-              float f1 = resFitAlt_wrtRm2[ii]->GetParameter(0)/(resFitAlt_wrtRm2[ii]->GetParameter(0)+resFitAlt_wrtRm2[ii]->GetParameter(3));
-              float f2 = resFitAlt_wrtRm2[ii]->GetParameter(3)/(resFitAlt_wrtRm2[ii]->GetParameter(0)+resFitAlt_wrtRm2[ii]->GetParameter(3));
-              sigma_eff = sqrt(f1*resFitAlt_wrtRm2[ii]->GetParameter(2)*resFitAlt_wrtRm2[ii]->GetParameter(2)+f2*resFitAlt_wrtRm2[ii]->GetParameter(5)*resFitAlt_wrtRm2[ii]->GetParameter(5) + f1*resFitAlt_wrtRm2[ii]->GetParameter(1)*resFitAlt_wrtRm2[ii]->GetParameter(1)+f2*resFitAlt_wrtRm2[ii]->GetParameter(4)*resFitAlt_wrtRm2[ii]->GetParameter(4) - (f1*resFitAlt_wrtRm2[ii]->GetParameter(1)+f2*resFitAlt_wrtRm2[ii]->GetParameter(4))*(f1*resFitAlt_wrtRm2[ii]->GetParameter(1)+f2*resFitAlt_wrtRm2[ii]->GetParameter(4)));
-              s_sigma = sqrt((f1*f1*resFitAlt_wrtRm2[ii]->GetParameter(2)*resFitAlt_wrtRm2[ii]->GetParameter(2)*resFitAlt_wrtRm2[ii]->GetParError(2)*resFitAlt_wrtRm2[ii]->GetParError(2)+f2*f2*resFitAlt_wrtRm2[ii]->GetParameter(4)*resFitAlt_wrtRm2[ii]->GetParameter(4)*resFitAlt_wrtRm2[ii]->GetParError(4)*resFitAlt_wrtRm2[ii]->GetParError(4)/(sigma_eff*sigma_eff)));
+    
+           if(iMCP != "Rm2"){
+              sigma_eff_sub = sqrt(sigma_eff*sigma_eff - sub_wrtRm2*sub_wrtRm2);
+              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma + sub_wrtRm2*sub_wrtRm2*sub_wrtRm2_error*sub_wrtRm2_error)/sigma_eff_sub;
            }else{
-              sigma_eff = resFitAlt_wrtRm2[ii]->GetParameter(2);    
-              s_sigma = resFitAlt_wrtRm2[ii]->GetParError(2);    
-           }
-
-           if(sigma_eff*1000. < 10.) continue;
-           if(iMCP != "MiB2" && iMCP != "Rm2"){
-              sigma_eff_sub = sqrt(sigma_eff*sigma_eff-sub_wrtRm2*sub_wrtRm2);
-              s_sigma_sub = sqrt(sigma_eff*sigma_eff*s_sigma*s_sigma+sub_wrtRm2*sub_wrtRm2*sub_wrtRm2_error*sub_wrtRm2_error)/sigma_eff_sub;
+              sigma_eff_sub = sigma_eff;
+              s_sigma_sub = s_sigma;
            }
            sigma_eff = sigma_eff_sub;
            s_sigma = s_sigma_sub;
@@ -903,7 +1071,7 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
       }   
     } 
     std::string Selection3 = Selection1+" && "+Selection2+HodoSelection; 
-
+ 
     setBins(h4, std::string("amp_max["+iMCP+"]"), Selection3, maxMCP);
     TH2F* timingCorrection_wrtMiB2 = new TH2F("timingCorrection_wrtMiB2","",nBins,ampMin,4000,timeMin);
     TH2F* timingCorrection_wrtRm2 = new TH2F("timingCorrection_wrtRm2","",nBins,ampMin,4000,timeMin);
@@ -931,9 +1099,10 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        timingCorrection_wrtMiB2_1->SetLineColor(kBlack);
        
        TF1* fit_corr1;
-       fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,atof(maxMCP.c_str()));
-       fit_corr1->SetParLimits(2,0.,999999999.);
+       //fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,atof(maxMCP.c_str()));
+       //fit_corr1->SetParLimits(2,0.,999999999.);
        //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log(x+[2])",0.,atof(maxMCP.c_str()));
+       fit_corr1 = new TF1("fit_corr1","[0]+[1]*exp([2]*x)",0.,atof(maxMCP.c_str()));
        //fit_corr1 = new TF1("fit_corr1","sqrt([0]+[1]*x+[2]*x*x)",0.,atof(maxMCP.c_str()));
        timingCorrection_wrtMiB2_1->Fit("fit_corr1");
        Params_wrtMiB2->push_back(fit_corr1->GetParameter(0));
@@ -973,7 +1142,8 @@ void TimeCorrection(TTree* h4, std::string iMCP, std::string nameiMCP, TFile* in
        //fit_corr1 = new TF1("fit_corr1","[0]+[1]*1/(x+[2])",0.,atof(maxMCP.c_str()));
        //fit_corr1->SetParLimits(2,0.,999999999.);
        //fit_corr1 = new TF1("fit_corr1","[0]+[1]*log(x+[2])",0.,atof(maxMCP.c_str()));
-       fit_corr1 = new TF1("fit_corr1","sqrt([0]+[1]*x+[2]x*x)",0.,atof(maxMCP.c_str()));
+       //fit_corr1 = new TF1("fit_corr1","sqrt([0]+[1]*x+[2]x*x)",0.,atof(maxMCP.c_str()));
+       fit_corr1 = new TF1("fit_corr1","pol1",0.,atof(maxMCP.c_str()));
        timingCorrection_wrtRm2_1->Fit("fit_corr1");
        Params_wrtRm2->push_back(fit_corr1->GetParameter(0));
        Params_wrtRm2->push_back(fit_corr1->GetParameter(1));
@@ -1719,7 +1889,7 @@ void setBins(TTree* h4, std::string var, std::string Selection, std::string maxM
     
     h4->Draw(std::string(var+">>h_var").c_str(),Selection.c_str());   
     int Total_Events = h_var->GetEntries();
-    int nEvents = (float)Total_Events/nBins;
+    int nEvents = (float)Total_Events/nBins; 
     
     float binMax = 0.;
     float binMin = 0.;
@@ -1752,3 +1922,60 @@ std::vector<std::string> split(const std::string text, std::string sep) {
   return tokens;
 }
 
+float UncertaintyFWHM(TF1* f, float integral)
+{
+   TH1F* time_wrtMiB2_FWHM = new TH1F("time_wrtMiB2_FWHM","",2000,-1.,1.);
+
+   TF1* f_new = new TF1("f_new","([0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6])",-5,5);   
+   f_new->FixParameter(0,f->GetParameter(0));  
+   f_new->FixParameter(1,f->GetParameter(1));  
+   f_new->FixParameter(2,f->GetParameter(2)+f->GetParError(2));  
+   f_new->FixParameter(3,f->GetParameter(3));  
+   f_new->FixParameter(4,f->GetParameter(4));
+   f_new->FixParameter(5,f->GetParameter(5)+f->GetParError(5));  
+   f_new->FixParameter(6,f->GetParameter(6));   
+ 
+   TF1* f_newScaled = new TF1("f_newScaled","([0]*exp(-0.5*((x-[1])/[2])^2)+[3]*exp(-0.5*((x-[4])/[5])^2)+[6])",-5,5); 
+   f_newScaled->FixParameter(0,f->GetParameter(0));  
+   f_newScaled->FixParameter(1,f->GetParameter(1));  
+   f_newScaled->FixParameter(2,f->GetParameter(2)+f->GetParError(2));  
+   f_newScaled->FixParameter(3,f->GetParameter(3));  
+   f_newScaled->FixParameter(4,f->GetParameter(4));
+   f_newScaled->FixParameter(5,f->GetParameter(5)+f->GetParError(5));  
+   f_newScaled->FixParameter(6,f->GetParameter(6));   
+   //f_newScaled->FixParameter(7,integral/f_new->Integral(-5.,5.));    
+   f_newScaled->FixParameter(7,1.);     
+   
+   time_wrtMiB2_FWHM->FillRandom("f_newScaled",100000);
+   int bin1 = time_wrtMiB2_FWHM->FindFirstBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+   int bin2 = time_wrtMiB2_FWHM->FindLastBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+   float fwhm_up = time_wrtMiB2_FWHM->GetBinCenter(bin2) - time_wrtMiB2_FWHM->GetBinCenter(bin1);
+
+   delete time_wrtMiB2_FWHM;
+   time_wrtMiB2_FWHM = new TH1F("time_wrtMiB2_FWHM","",2000,-1.,1.);
+
+   f_new->FixParameter(0,f->GetParameter(0));  
+   f_new->FixParameter(1,f->GetParameter(1));  
+   f_new->FixParameter(2,f->GetParameter(2)-f->GetParError(2));  
+   f_new->FixParameter(3,f->GetParameter(3));  
+   f_new->FixParameter(4,f->GetParameter(4));
+   f_new->FixParameter(5,f->GetParameter(5)-f->GetParError(5));  
+   f_new->FixParameter(6,f->GetParameter(6));   
+ 
+   f_newScaled->FixParameter(0,f->GetParameter(0));  
+   f_newScaled->FixParameter(1,f->GetParameter(1));  
+   f_newScaled->FixParameter(2,f->GetParameter(2)-f->GetParError(2));  
+   f_newScaled->FixParameter(3,f->GetParameter(3));  
+   f_newScaled->FixParameter(4,f->GetParameter(4));
+   f_newScaled->FixParameter(5,f->GetParameter(5)-f->GetParError(5));  
+   f_newScaled->FixParameter(6,f->GetParameter(6));   
+   //f_newScaled->FixParameter(7,integral/f_new->Integral(-5.,5.)); 
+   f_newScaled->FixParameter(7,1.);     
+    
+   time_wrtMiB2_FWHM->FillRandom("f_newScaled",100000);
+   bin1 = time_wrtMiB2_FWHM->FindFirstBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+   bin2 = time_wrtMiB2_FWHM->FindLastBinAbove(time_wrtMiB2_FWHM->GetMaximum()/2);
+   float fwhm_down = time_wrtMiB2_FWHM->GetBinCenter(bin2) - time_wrtMiB2_FWHM->GetBinCenter(bin1);
+   std::cout << "fwhm_up = " << fwhm_up << " - fwhm_down = " << fwhm_down << std::endl;
+   return fabs(fwhm_down-fwhm_up)/2;
+}

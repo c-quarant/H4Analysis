@@ -111,6 +111,12 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
                                                                    WFs_[channel]->GetNSample());
         digiTree_.charge_sig[outCh] = WFs_[channel]->GetSignalIntegral(opts.GetOpt<int>(channel+".signalInt", 0), 
                                                                      opts.GetOpt<int>(channel+".signalInt", 1));
+
+        if(opts.OptExist(channel+".useTrigRef") && opts.GetOpt<bool>(channel+".useTrigRef"))
+           digiTree_.trigger_ref[outCh] = WFs_[channel]->GetTriggerRef();
+        else
+           digiTree_.trigger_ref[outCh] = 0.;
+
         //---compute time with all the requested time reconstruction method
         for(int iT=0; iT<timeRecoTypes_.size(); ++iT)
         {

@@ -53,7 +53,8 @@ public:
     float*        fit_chi2;
     int*          channels;
     int*          time_types;
-    float*        calibration;
+    float*        calibration; 
+    float*        trigger_ref;
 };
 
 #endif

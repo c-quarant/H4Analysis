@@ -72,6 +72,7 @@ public:
     void                   EmulatedWF(WFClass& wf, float rms, float amplitude, float time);
     void                   FFT(WFClass& wf, float tau, int cut);
     void                   Print();
+    float                  GetTriggerRef();
     //---operators---
     WFClass&               operator=(const WFClass& origin);
     WFClass                operator-(const WFClass& sub);

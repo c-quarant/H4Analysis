@@ -60,17 +60,21 @@ void ReadInputFiles(CfgManager& opts, TChain* inTree)
     string run=opts.GetOpt<string>("h4reco.run");
 
     //---Get file list searching in specified path (eos or locally)
-    if(path.find("/eos/cms") != string::npos)
+    if(path.find("/store/") != string::npos && path.find("/eos/cms") == string::npos){
+       nFiles = 1;
+       inTree->AddFile(("root://eoscms.cern.ch/"+path+run+".root").c_str());
+    }else{   
+     if(path.find("/eos/cms") != string::npos)
         ls_command = string("gfal-ls root://eoscms/"+path+run+" | grep 'root' > tmp/"+run+".list");
-    else if(path.find("srm://") != string::npos)
+     else if(path.find("srm://") != string::npos)
         ls_command = string("lcg-ls "+path+run+
                             " | sed -e 's:^.*\\/cms\\/:root\\:\\/\\/xrootd-cms.infn.it\\/\\/:g' | grep 'root' > tmp/"+run+".list");
-    else
+     else
         ls_command = string("ls "+path+run+" | grep 'root' > tmp/"+run+".list");
-    system(ls_command.c_str());
-    ifstream waveList(string("tmp/"+run+".list").c_str(), ios::in);
-    while(waveList >> file && (opts.GetOpt<int>("h4reco.maxFiles")<0 || nFiles<opts.GetOpt<int>("h4reco.maxFiles")) )
-    {
+     system(ls_command.c_str());
+     ifstream waveList(string("tmp/"+run+".list").c_str(), ios::in);
+     while(waveList >> file && (opts.GetOpt<int>("h4reco.maxFiles")<0 || nFiles<opts.GetOpt<int>("h4reco.maxFiles")) )
+     {
         if(path.find("/eos/cms") != string::npos)
         {
             std::cout << "+++ Adding file " << ("root://eoscms/"+path+run+"/"+file).c_str() << std::endl;
@@ -87,8 +91,8 @@ void ReadInputFiles(CfgManager& opts, TChain* inTree)
             inTree->AddFile((path+run+"/"+file).c_str());
         }
         ++nFiles;
+     }
     }
-
     return;
 }
 

@@ -560,6 +560,13 @@ void WFClass::Print()
         std::cout << "SAMPLE " << i << ": " << samples_[i] << std::endl;
 }
 
+float WFClass::GetTriggerRef()
+{
+    float trigRef_tmp = 0.; 
+    trigRef_tmp  = trigRef_;
+    return trigRef_tmp;
+}
+
 //**********operators*********************************************************************
 //----------assignment--------------------------------------------------------------------
 WFClass& WFClass::operator=(const WFClass& origin)

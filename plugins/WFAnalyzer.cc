@@ -157,7 +157,6 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         //---WFs---
         if(fillWFtree)
         {
-            outWFTree_.WF_trigRef = trigRef_;
             auto analizedWF = WFs_[channel]->GetSamples();
             int nSamples = analizedWF->size();
             float tUnit = WFs_[channel]->GetTUnit();

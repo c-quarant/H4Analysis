@@ -95,14 +95,21 @@ bool HodoReco::ProcessEvent(const H4Tree& h4Tree, map<string, PluginBase*>& plug
   
     for(unsigned int i=0; i<h4Tree.nPatterns; ++i)
     {
-        if(h4Tree.patternBoard[i] == 134414337 ||
-           h4Tree.patternBoard[i] == 134414338)
+        //if(h4Tree.patternBoard[i] == 134414337 ||
+        //   h4Tree.patternBoard[i] == 134414338)
+        //H4 Fall 2015
+        if(h4Tree.patternBoard[i] == 134348801 ||
+           h4Tree.patternBoard[i] == 134348802)
         {
             int pos = -1; // here is where the real hodoscope mapping is done
       
-            if(h4Tree.patternBoard[i] == 134414337)
+            /*if(h4Tree.patternBoard[i] == 134414337)
                 pos = (h4Tree.patternChannel[i]<2) ? HODO_Y2 : HODO_X2;
             else if(h4Tree.patternBoard[i] == 134414338)
+                pos = (h4Tree.patternChannel[i]<2) ? HODO_Y1 : HODO_X1;*/
+            if(h4Tree.patternBoard[i] == 134348801)
+                pos = (h4Tree.patternChannel[i]<2) ? HODO_Y2 : HODO_X2;
+            else if(h4Tree.patternBoard[i] == 134348802)
                 pos = (h4Tree.patternChannel[i]<2) ? HODO_Y1 : HODO_X1;
       
             std::vector<int>* fiberorder = (bool)(h4Tree.patternChannel[i]&0b1) ? &hodoFiberOrderB_ : &hodoFiberOrderA_;

@@ -60,7 +60,7 @@ void ReadInputFiles(CfgManager& opts, TChain* inTree)
     string run=opts.GetOpt<string>("h4reco.run");
 
     //---Get file list searching in specified path (eos or locally)
-    if(path.find("/store/") != string::npos && path.find("/eos/cms") == string::npos){
+    if(path.find("/store/") != string::npos && path.find("/eos/cms") == string::npos && path.find("srm://") == string::npos){
        nFiles = 1;
        inTree->AddFile(("root://eoscms.cern.ch/"+path+run+".root").c_str());
     }else{   
@@ -193,8 +193,10 @@ int main(int argc, char* argv[])
         }
 
         //---call ProcessEvent for each plugin
+        bool status=true;
         for(auto& plugin : pluginSequence)
-            plugin->ProcessEvent(h4Tree, pluginMap, opts);
+            if(status)
+               status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
 
         //---fill the main tree with info variables and increase event counter
         mainTree.time_stamp = h4Tree.evtTimeStart;

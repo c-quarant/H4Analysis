@@ -10,6 +10,18 @@
 #include "FPCanvasStyle.C"
 #include "setStyle.C"
 
+Double_t fitfunc(Double_t *v, Double_t *par) {
+  Double_t arg = 0;
+  if (par[2] != 0) arg = v[0]/par[2];
+  Double_t fitval;
+  if (arg>1)
+    fitval = par[0]*(1.- (1./(par[1]*log(arg)+1))) + par[3]*(1-par[0]*(1.- (1./(par[1]*log(arg)+1))));
+  else
+    fitval = 0.;
+  
+  return fitval;
+}
+
 void draw_Efficiencies() {
 
   // inputs
@@ -27,6 +39,26 @@ void draw_Efficiencies() {
 
   TGraphAsymmErrors *effZS2Corr  = (TGraphAsymmErrors*)inputH4->Get("effZS2Corr");
   TGraphAsymmErrors *effMib3Corr = (TGraphAsymmErrors*)inputH4->Get("effMib3Corr");
+
+  TF1* f1 = new TF1("f1",fitfunc,0.,2700.,4);
+  f1->SetParameters(1.,1.,300.,0.);  
+  f1->SetParLimits(0,0.,1.);
+  f1->SetParLimits(1,0.,1.);
+  f1->SetParLimits(2,0.,1000.);
+  f1->SetParLimits(3,0.,1.);
+
+  //binp3->Fit("f1","B");
+
+  TF1* f2 = new TF1("f2",fitfunc,0.,2700.,4);
+  f2->SetParameters(0.5,0.5,1400.,0.5,0.5);
+  f2->SetParLimits(0,0.,1.);
+  f2->SetParLimits(1,0.,1.);
+  f2->SetParLimits(2,1300.,1500.);
+  f2->SetParLimits(3,0.,1.);
+  f2->SetParLimits(4,0.,1.);
+  effMib25Corr_1200->Fit("f2","B");
+
+  TF1* f3 = new TF1("f3",fitfunc,0.,2700.,4);
 
   // cosmetics
   binp1->SetMarkerStyle(20);
@@ -139,8 +171,8 @@ void draw_Efficiencies() {
   latex2.SetTextSize(0.04);
   latex2.SetNDC(kTRUE);
   latex2.Draw(); 
-  c1->SaveAs("summaryEff_v2.png");
-  c1->SaveAs("summaryEff_v2.pdf");
+  c1->SaveAs("summaryEff_v3.png");
+  c1->SaveAs("summaryEff_v3.pdf");
 
 
 }

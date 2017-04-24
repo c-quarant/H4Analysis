@@ -196,42 +196,47 @@ void draw_PulseShape()
     TLine *vLine1 = new TLine(0,-280,0,1000.);
     vLine1->SetLineColor(kGreen+2);
     vLine1->SetLineWidth(2);
+    vLine1->SetLineStyle(2);
 
     //TLine *hLine1 = new TLine(-5,420,0,420);
     TLine *hLine1 = new TLine(-5,1000.,0,1000.);
     hLine1->SetLineColor(kGreen+2);
     hLine1->SetLineWidth(2);
+    hLine1->SetLineStyle(2);
 
     //TLine *vLine2 = new TLine(0.75,-300,0.75,1200);
-    TLine *vLine2 = new TLine(0.73,-300,0.73,2000.);
-    vLine2->SetLineColor(kRed+1);
-    vLine2->SetLineWidth(2);
+    //TLine *vLine2 = new TLine(0.73,-300,0.73,2000.);
+    //vLine2->SetLineColor(kRed+1);
+    //vLine2->SetLineWidth(2);
 
     //TLine *hLine2 = new TLine(-5,1200,0.75,1200);
     TLine *hLine2 = new TLine(-5,2000,0.75,2000);
     hLine2->SetLineColor(kRed+1);
     hLine2->SetLineWidth(2);
+    hLine2->SetLineStyle(4);
 
     TGraphAsymmErrors* g_tmp1 = new TGraphAsymmErrors();
     g_tmp1->SetLineColor(kGreen+2);
     g_tmp1->SetMarkerColor(kGreen+2);
+    g_tmp1->SetLineStyle(2);
     g_tmp1->SetLineWidth(2);
 
     TGraphAsymmErrors* g_tmp2 = new TGraphAsymmErrors();
     g_tmp2->SetLineColor(kRed+1);
     g_tmp2->SetMarkerColor(kRed+1);
     g_tmp2->SetLineWidth(2);
+    g_tmp2->SetLineStyle(4);
 
-    TLegend* legend = new TLegend(0.45, 0.67, 0.79, 0.79);
+    TLegend* legend = new TLegend(0.55, 0.67, 0.79, 0.79);
     legend -> SetFillColor(kWhite);
     legend -> SetFillStyle(1000);
     legend -> SetLineWidth(0);
     legend -> SetLineColor(kWhite);
     legend -> SetTextFont(42);  
-    legend -> SetTextSize(0.04);
+    legend -> SetTextSize(0.03);
     
-    legend -> AddEntry(g_tmp1,"Time at half amplitude (CFD)","L");
-    legend -> AddEntry(g_tmp2,"Time at maximum amplitude","L");
+    legend -> AddEntry(g_pulseShape,"Digitizer waveform (5 GHz)","L");
+    legend -> AddEntry(g_tmp1,"Time at 50\% of maximum (t_{CFD})","L");
 
     TCanvas* c1 = new TCanvas();
     FPCanvasStyle(c1);
@@ -240,12 +245,12 @@ void draw_PulseShape()
     legend->Draw("same");
     vLine1->Draw("same");
     hLine1->Draw("same");
-    vLine2->Draw("same");
+    //vLine2->Draw("same");
     hLine2->Draw("same");
-    TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 491 MeV}}");;
-    latex2.SetTextSize(0.04);
-    latex2.SetNDC(kTRUE);
-    latex2.Draw();
+    //TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 491 MeV}}");;
+    //latex2.SetTextSize(0.04);
+    //latex2.SetNDC(kTRUE);
+    //latex2.Draw();
     c1 -> Print(std::string("pulseShape.png").c_str(),"png");
     c1 -> Print(std::string("pulseShape.pdf").c_str(),"pdf");
 }

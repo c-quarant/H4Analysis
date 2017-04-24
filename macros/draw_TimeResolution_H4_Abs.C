@@ -30,7 +30,7 @@ void draw_TimeResolution_H4_Abs()
 
     bool isF1_open = false;
 
-    infile.open("res_vs_HV_ZS2_abs_final_v2.dat");    
+    infile.open("res_vs_HV_ZS2_abs_final_v3.dat");    
     if(!infile.fail())
     {
        int raw = 0;
@@ -42,6 +42,7 @@ void draw_TimeResolution_H4_Abs()
           float X0, res, resError;
           infile >> X0 >> res >> resError;
           std::cout << X0 << " " << res << " " << resError << " " << raw << std::endl;
+          //if(X0 == 1.) continue;
           g1->SetPoint(raw,X0,res);
           g1->SetPointEYlow(raw,resError); 
           g1->SetPointEYhigh(raw,resError); 
@@ -75,16 +76,16 @@ void draw_TimeResolution_H4_Abs()
 
     TLine *line = new TLine(0,20,6,20);
     line->SetLineColor(kBlack);
-    line->SetLineStyle(4);
+    //line->SetLineStyle(4);
     line->SetLineWidth(2);
     
     TCanvas* c1 = new TCanvas();
     FPCanvasStyle(c1);
     H2->Draw();
-    g1->Draw("PC,same");
+    g1->Draw("PL,same");
     legend->Draw("same");
     line->Draw("same");
-    TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 50 GeV}}");;
+    TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 20 GeV}}");;
     latex2.SetTextSize(0.04);
     latex2.SetNDC(kTRUE);
     latex2.Draw(); 

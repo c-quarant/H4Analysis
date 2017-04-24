@@ -33,18 +33,27 @@ void draw_ScintSpectrum()
     h4->Draw("adc_data[scint] >> h_amp");  
     h_amp->SetLineColor(kCyan+1);
     h_amp->SetFillColor(kCyan+1);
+    
+    TH1F* h_amp_sel = new TH1F("h_amp_sel","",225,0.,4500.);
+    h4->Draw("adc_data[scint] >> h_amp_sel","adc_data[scint]>200. && adc_data[scint] <700.");  
+    h_amp_sel->SetLineColor(kYellow+1);
+    h_amp_sel->SetFillColor(kYellow+1);
+    //h_amp_sel->SetFillStyle(3003);
 
-    //h_amp->Scale(1./h_amp->Integral());
+    float norm = 1./h_amp->Integral();
+
+    h_amp->Scale(norm);
+    h_amp_sel->Scale(norm);
 
     setStyle();  
 
-    TH2F* H2 = new TH2F("H2","",225,0.,4500.,100,1.,100000);
+    TH2F* H2 = new TH2F("H2","",225,0.,4500.,100,0.00001,1.);
     H2->GetXaxis()->SetTitle("amplitude (ADC counts)");
-    H2->GetYaxis()->SetTitle("events");
+    H2->GetYaxis()->SetTitle("a.u.");
     H2->GetXaxis()->SetLabelSize(0.04);
     //H2->GetYaxis()->SetLabelSize(0.04);
 
-    TLegend* legend = new TLegend(0.58, 0.75, 0.65, 0.82);
+    TLegend* legend = new TLegend(0.55, 0.65, 0.65, 0.82);
     legend -> SetFillColor(kWhite);
     legend -> SetFillStyle(1000);
     legend -> SetLineWidth(0);
@@ -53,13 +62,14 @@ void draw_ScintSpectrum()
     legend -> SetTextSize(0.04);
     
     legend -> AddEntry(h_amp,"Scintillator","F");
+    legend -> AddEntry(h_amp_sel,"Selected range","F");
     
     TCanvas* c1 = new TCanvas();
     FPCanvasStyle(c1);
     c1->SetLogy();
     H2->Draw();
     h_amp->Draw("H,same");
-    //H2->Draw("H,same");
+    h_amp_sel->Draw("HF,same");
     c1->RedrawAxis("sameaxis");
     legend->Draw("same");
     TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 491 MeV}}");;

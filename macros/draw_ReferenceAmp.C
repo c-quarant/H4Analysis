@@ -12,9 +12,9 @@
 #include "FPCanvasStyle.C"
 #include "setStyle.C"
 
-#include<iostream>
-#include<string>
-#include<fstream>
+#include <iostream>
+#include <string>
+#include <fstream>
 
 void draw_ReferenceAmp()
 {
@@ -30,11 +30,18 @@ void draw_ReferenceAmp()
      
     TTree* h4 = (TTree*)inputFile->Get("h4");
     TH1F* h_amp = new TH1F("h_amp","",130,0.,1300.);
+    TH1F* h_amp_sel = new TH1F("h_amp_sel","",130,0.,1300.);
     h4->Draw("amp_max[MiB2] >> h_amp","adc_data[scint]>200 && adc_data[scint] < 700");  
+    h4->Draw("amp_max[MiB2] >> h_amp_sel","adc_data[scint]>200 && adc_data[scint] < 700 && amp_max[MiB2]>200.");  
     h_amp->SetLineColor(kCyan+1);
     h_amp->SetFillColor(kCyan+1);
+    h_amp_sel->SetLineColor(kYellow+1);
+    h_amp_sel->SetFillColor(kYellow+1);
 
-    h_amp->Scale(1./h_amp->Integral());
+    float norm = 1./h_amp->Integral();
+
+    h_amp->Scale(norm);
+    h_amp_sel->Scale(norm);
 
     setStyle();  
 
@@ -45,7 +52,7 @@ void draw_ReferenceAmp()
     h_amp->GetXaxis()->SetTitle("amplitude (ADC counts)");
     h_amp->GetYaxis()->SetTitle("a.u.");
 
-    TLegend* legend = new TLegend(0.58, 0.75, 0.65, 0.82);
+    TLegend* legend = new TLegend(0.55, 0.65, 0.65, 0.82);
     legend -> SetFillColor(kWhite);
     legend -> SetFillStyle(1000);
     legend -> SetLineWidth(0);
@@ -54,13 +61,14 @@ void draw_ReferenceAmp()
     legend -> SetTextSize(0.04);
     
     legend -> AddEntry(h_amp,"PMT-MCP Reference","F");
+    legend -> AddEntry(h_amp_sel,"Selected range","F");
     
     TCanvas* c1 = new TCanvas();
     FPCanvasStyle(c1);
     c1->SetLogy();
     H2->Draw();
     h_amp->Draw("H,same");
-    //H2->Draw("H,same");
+    h_amp_sel->Draw("H,same");
     c1->RedrawAxis("sameaxis");
     legend->Draw("same");
     TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 491 MeV}}");;

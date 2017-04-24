@@ -38,13 +38,63 @@ void draw_TimeResolution_vs_amplitude()
     TimeResolution_vs_amp_wrtMiB2->SetLineColor(kRed+1);
     TimeResolution_vs_amp_wrtMiB2->SetLineWidth(1);
 
+    for(int ii = 0; ii < TimeResolution_vs_amp_wrtMiB2->GetN();ii++)
+    {
+        double x,y;
+        double x_errorUp,y_errorUp, x_errorDown,y_errorDown;
+        TimeResolution_vs_amp_wrtMiB2->GetPoint(ii,x,y);
+        x_errorDown = TimeResolution_vs_amp_wrtMiB2->GetErrorXlow(ii);
+        x_errorUp = TimeResolution_vs_amp_wrtMiB2->GetErrorXhigh(ii);
+        y_errorDown = TimeResolution_vs_amp_wrtMiB2->GetErrorYlow(ii);
+        y_errorUp = TimeResolution_vs_amp_wrtMiB2->GetErrorYhigh(ii); 
+
+        //std::cout << ii << " " << x-x_errorDown << " " << x+x_errorUp << " " << y << "+" << y_errorUp << "-" << y_errorDown << std::endl; 
+
+        TimeResolution_vs_amp_wrtMiB2->SetPoint(ii,x/3.4,y);
+        TimeResolution_vs_amp_wrtMiB2->SetPointEXlow(ii,x_errorDown/3.4); 
+        TimeResolution_vs_amp_wrtMiB2->SetPointEXhigh(ii,x_errorUp/3.4); 
+        TimeResolution_vs_amp_wrtMiB2->SetPointEYlow(ii,y_errorDown); 
+        TimeResolution_vs_amp_wrtMiB2->SetPointEYhigh(ii,y_errorUp); 
+    }
+
+    bool useBestResolution = true;
+    bool isF1_open = false;
+    if(useBestResolution){
+       ifstream infile;    
+       infile.open("resolution_vs_amp_BINP3.txt");    
+       if(!infile.fail())
+       {
+        int raw = 0;
+        isF1_open = true;
+        while(!infile.eof())
+        {
+          if(infile.eof())
+             break;
+          float res, resError;
+          infile >> res >> resError;
+          //std::cout << res << " " << resError << " " << raw << std::endl;
+
+          double x,y;
+          TimeResolution_vs_amp_wrtMiB2->GetPoint(raw,x,y);
+          TimeResolution_vs_amp_wrtMiB2->SetPoint(raw,x,res);
+          TimeResolution_vs_amp_wrtMiB2->SetPointEYlow(raw,resError); 
+          TimeResolution_vs_amp_wrtMiB2->SetPointEYhigh(raw,resError); 
+          raw++;
+        }    
+     }
+     infile.close(); 
+    }
+
     TF1* g_res;
     g_res = new TF1("g_res","sqrt([0]*[0]/(x*x)+[1]*[1])",0.,3500.); 
     g_res->SetParName(0,"a");   
     g_res->SetParName(1,"b"); 
     g_res->SetParameters(0,900.);
     g_res->SetParameters(1,5);
-    g_res->SetParLimits(1,0.,40.);      
+    g_res->SetParLimits(1,0.,40.);  
+    g_res->SetLineWidth(2);
+    g_res->SetLineColor(kViolet+1);
+        
     TimeResolution_vs_amp_wrtMiB2->Fit("g_res","B");
 
     float p_const_data = 0.;
@@ -66,9 +116,9 @@ void draw_TimeResolution_vs_amplitude()
         float res = y+delta;
         if(ii == 0) TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPoint(ii,x,99999.);
         else{
-           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPoint(ii-1,x,res);
-           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEXlow(ii-1,x_errorDown); 
-           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEXhigh(ii-1,x_errorUp); 
+           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPoint(ii-1,x/3.4,res);
+           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEXlow(ii-1,x_errorDown/3.4); 
+           TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEXhigh(ii-1,x_errorUp/3.4); 
            TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEYlow(ii-1,y_errorDown); 
            TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetPointEYhigh(ii-1,y_errorUp); 
         }
@@ -80,9 +130,6 @@ void draw_TimeResolution_vs_amplitude()
     TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetLineColor(kBlue+1);
     TimeResolution_vs_amp_wrtMiB2_SIM_shifted->SetLineWidth(1);
 
-    g_res->SetLineWidth(2);
-    g_res->SetLineColor(kViolet+1);
-    
     setStyle(); 
     
     float ampBinning[9] = {20.};
@@ -98,8 +145,10 @@ void draw_TimeResolution_vs_amplitude()
     for(int ii = 0; ii<= 700; ii++)
         resBinning[ii] = 10+ii*0.1;
 
-    TH2F* H2 = new TH2F("H2","",8,ampBinning,700,resBinning);
-    H2->GetXaxis()->SetTitle("amplitude (ADC counts)");
+    //TH2F* H2 = new TH2F("H2","",8,ampBinning,700,resBinning);
+    TH2F* H2 = new TH2F("H2","",8,7.,1340.,90,10.,80.);
+    H2->GetXaxis()->SetTitle("S/N");
+    //H2->GetXaxis()->SetTitleSize(0.045);
     H2->GetYaxis()->SetTitle("#sigma_{t} (ps)");
 
     TLegend* legend = new TLegend(0.58, 0.45, 0.72, 0.62);
@@ -136,27 +185,23 @@ void draw_TimeResolution_vs_amplitude()
     latexLabel3->SetTextColor(kViolet+1);
     latexLabel3->SetNDC();
     latexLabel3->SetTextFont(42); // helvetica
-
+    
     char LatexText3[1000];
     //sprintf(LatexText3,"a = %.0f #pm %.0f ADC x ps",g_res->GetParameter(0),g_res->GetParError(0)); 
-    sprintf(LatexText3,"a = 2.8 #pm 0.9 ADC x ns",g_res->GetParameter(0),g_res->GetParError(0)); 
+    sprintf(LatexText3,"a = 0.9 #pm 0.3 ADC x ns",g_res->GetParameter(0),g_res->GetParError(0)); 
 
     TCanvas* c1 = new TCanvas();
     FPCanvasStyle(c1);
     c1->SetLogx();
     H2->Draw();
-    TimeResolution_vs_amp_wrtMiB2->Draw("P,same");
     TimeResolution_vs_amp_wrtMiB2_SIM_shifted->Draw("P,same");  
+    TimeResolution_vs_amp_wrtMiB2->Draw("P,same");
     latexLabel->DrawLatex(0.58, 0.83,LatexText);
     latexLabel3->DrawLatex(0.58, 0.74,LatexText3);
     latexLabel2->DrawLatex(0.58, 0.65,LatexText2);
     //g_res->SetStats(0);
-    g_res->Draw("same");
+    //g_res->Draw("same");
     c1->Update();
-    TPaveStats *st = (TPaveStats*)TimeResolution_vs_amp_wrtMiB2->FindObject("stats");
-    st->SetY1NDC(0.); //new x start position
-    st->SetY2NDC(0.); //new x end position
-    st->Draw();
     legend->Draw("same");
     TLatex latex2(0.65, 0.94,"#bf{#bf{Electrons at 491 MeV}}");;
     latex2.SetTextSize(0.04);

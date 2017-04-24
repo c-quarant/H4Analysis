@@ -22,7 +22,7 @@ float stepSize = 50.;
 std::string ShiftVar(TTree* h4, std::string Var);
 void FinalTiming(TTree* h4, TTree* digi, TFile* inputFile, std::string Timing, std::string thresMCP, bool doScan);
 
-void measureTiming_SIM(std::string inputs, std::string Timing, std::string thresMCP, bool doScan = true)
+void ComputeTiming_oneStep_SIM(std::string inputs, std::string Timing, std::string thresMCP, bool doScan = true)
 {
     gStyle->SetOptTitle(0); 
     //gStyle->SetOptStat(1110); 

@@ -151,9 +151,15 @@ bool HodoReco::ProcessEvent(const H4Tree& h4Tree, map<string, PluginBase*>& plug
                 value = 0.5 * (vals.at(1) - 32.);
         }
         if(i%2 == 0)
+        {
+            hodoTree_.n_hitsX[i/nPlanes_] = (int)fibersOn[i].size();
             hodoTree_.X[i/nPlanes_] = value + offset;
+        }
         else
+        {
+            hodoTree_.n_hitsY[i/nPlanes_] = (int)fibersOn[i].size();
             hodoTree_.Y[i/nPlanes_] = value + offset;
+        }
     }
     //---fill output tree
     hodoTree_.Fill();

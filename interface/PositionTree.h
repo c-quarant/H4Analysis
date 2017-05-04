@@ -29,8 +29,8 @@ public:
 
     uint64* index;
     int n_planes;
-    int n_hitsX;
-    int n_hitsY;
+    int* n_hitsX;
+    int* n_hitsY;
     float* X;
     float* Y;
 };

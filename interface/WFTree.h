@@ -31,6 +31,7 @@ public:
     string suffix_;
 
     uint64* index;
+    float   WF_trigRef;
     int     WF_samples;
     int*    WF_ch; 
     float*  WF_time;

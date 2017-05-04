@@ -24,7 +24,7 @@ bool DigitizerReco::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& 
 {        
     //---read the digitizer
     //---set time reference from digitized trigger
-    int trigRef=0;
+    float trigRef=0.;
     for(int iSample=nSamples_*8; iSample<nSamples_*9; ++iSample)
     {
         if(event.digiSampleValue[iSample] < 1000)
@@ -54,7 +54,7 @@ bool DigitizerReco::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& 
             WFs[channel]->AddSample(event.digiSampleValue[iSample]);
         }
         if(opts.OptExist(channel+".useTrigRef") && opts.GetOpt<bool>(channel+".useTrigRef"))
-            WFs[channel]->SetTrigRef(trigRef);
+	   WFs[channel]->SetTrigRef(trigRef);
     }
     
     return true;

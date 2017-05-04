@@ -8,8 +8,8 @@
 WFClass::WFClass(int polarity, float tUnit):
     polarity_(polarity), tUnit_(tUnit), trigRef_(0), sWinMin_(-1), sWinMax_(-1), 
     bWinMin_(-1), bWinMax_(-1),  maxSample_(-1), fitAmpMax_(-1), fitTimeMax_(-1),
-    fitChi2Max_(-1), baseline_(-1), bRMS_(-1), leSample_(-1), leTime_(-1),
-    cfSample_(-1), cfFrac_(-1), cfTime_(-1), chi2cf_(-1), chi2le_(-1),
+    fitChi2Max_(-1), baseline_(-1), bRMS_(-1), leSample_(-1), leSampleMirror_(-1), leTime_(-1), leTimeMirror_(-1),
+    cfSample_(-1), cfSampleMirror_(-1), cfFrac_(-1), cfTime_(-1), cfTimeMirror_(-1), chi2cf_(-1), chi2le_(-1),
     fWinMin_(-1), fWinMax_(-1), tempFitTime_(-1), tempFitAmp_(-1), interpolator_(NULL)
 {}
 //**********Getters***********************************************************************
@@ -73,7 +73,7 @@ WFFitResults WFClass::GetInterpolatedAmpMax(int min, int max, int nFitSamples)
 }
 
 //----------Get time with the specified method--------------------------------------------
-pair<float, float> WFClass::GetTime(string method, vector<float>& params)
+pair< pair<float, float>, float> WFClass::GetTime(string method, vector<float>& params)
 {
     //---CFD
     if(method.find("CFD") != string::npos)
@@ -104,25 +104,29 @@ pair<float, float> WFClass::GetTime(string method, vector<float>& params)
     else
     {
         cout << ">>>ERROR: time reconstruction method <" << method << "> not supported" << endl;
-        return make_pair(-1000, -1);
+        return make_pair(make_pair(-1000, -1000), -1);
     }    
 }
 
 //----------Get CF time for a given fraction and in a given range-------------------------
-pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int max)
+pair< pair<float, float>, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int max)
 {
     if(frac != cfFrac_ || cfSample_ != -1)
     {
         //---setups---
         int tStart=min;
+        int tStop=max;
         if(tStart == -1)
             tStart=sWinMin_ == -1 ? 0 : sWinMin_;
         cfSample_ = tStart;
+        if(tStop == -1)
+            tStop=sWinMax_ == -1 ? 1024 : sWinMax_;
+        cfSampleMirror_ = tStop;
         cfFrac_ = frac;
         if(fitAmpMax_ == -1)
             GetInterpolatedAmpMax(min, max);
         if(frac == 1) 
-            return make_pair(maxSample_*tUnit_, 1);
+            return make_pair(make_pair(maxSample_*tUnit_, maxSample_*tUnit_), 1);
     
         //---find first sample above Amax*frac
         for(int iSample=maxSample_; iSample>tStart; --iSample)
@@ -137,17 +141,31 @@ pair<float, float> WFClass::GetTimeCF(float frac, int nFitSamples, int min, int 
         float A=0, B=0;
         chi2cf_ = LinearInterpolation(A, B, cfSample_-(nFitSamples-1)/2, cfSample_+(nFitSamples-1)/2);
         cfTime_ = (fitAmpMax_ * frac - A) / B;
+
+        //---find first sample above Amax*frac (mirror)
+        for(int iSample=maxSample_; iSample<tStop; ++iSample)
+        {
+            if(samples_.at(iSample) < fitAmpMax_*frac) 
+            {
+                cfSampleMirror_ = iSample;
+                break;
+            }
+        }
+        //---interpolate -- A+Bx = frac * amp
+        A=0, B=0;
+        float chi2cfMirror_ = LinearInterpolation(A, B, cfSampleMirror_-(nFitSamples-1)/2, cfSampleMirror_+(nFitSamples-1)/2);
+        cfTimeMirror_ = (fitAmpMax_ * frac - A) / B;
     }
 
-    return make_pair(cfTime_, chi2cf_);
+    return make_pair(make_pair(cfTime_,cfTimeMirror_), chi2cf_);
 }
 
 //----------Get leading edge time at a given threshold and in a given range---------------
-pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
+pair< pair<float, float>, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamples, int min, int max)
 {
     //---check if signal window is valid
     if(min==max && max==-1 && sWinMin_==sWinMax_ && sWinMax_==-1)
-        return make_pair(-1000, -1);
+        return make_pair(make_pair(-1000, -1000), -1);
     //---setup signal window
     if(min!=-1 && max!=-1)
         SetSignalWindow(min, max);
@@ -168,9 +186,25 @@ pair<float, float> WFClass::GetTimeLE(float thr, int nmFitSamples, int npFitSamp
         float A=0, B=0;
         chi2le_ = LinearInterpolation(A, B, leSample_-nmFitSamples, leSample_+npFitSamples);
         leTime_ = (leThr_ - A) / B;
+       
+        //---find first sample above thr (mirror)
+        for(int iSample=leSample_; iSample<1024; ++iSample)
+        {
+	    if(leSample_ == -1) break;
+            if(samples_.at(iSample) < leThr_) 
+            {
+                leSampleMirror_ = iSample-1;
+                break;
+            }
+        }
+        //---interpolate -- A+Bx = amp
+        A=0, B=0;
+        float chi2leMirror_ = LinearInterpolation(A, B, leSampleMirror_-nmFitSamples, leSampleMirror_+npFitSamples);
+        leTimeMirror_ = (leThr_ - A) / B;
     }
 
-    return make_pair(leTime_, chi2le_);
+    if(leSample_ == -1 && leSampleMirror_ ==-1) return make_pair(make_pair(-1000, -1000), -1);
+    else return make_pair(make_pair(leTime_, leTimeMirror_), chi2le_);
 }
 
 //----------Get the waveform integral in the given range----------------------------------
@@ -524,6 +558,13 @@ void WFClass::Print()
     std::cout << "+++ DUMP WF +++" << std::endl;
     for (int i=0; i<samples_.size(); ++i)
         std::cout << "SAMPLE " << i << ": " << samples_[i] << std::endl;
+}
+
+float WFClass::GetTriggerRef()
+{
+    float trigRef_tmp = 0.; 
+    trigRef_tmp  = trigRef_;
+    return trigRef_tmp;
 }
 
 //**********operators*********************************************************************

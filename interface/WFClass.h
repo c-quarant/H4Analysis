@@ -53,9 +53,9 @@ public:
     inline float           GetTUnit() {return tUnit_;};
     float                  GetAmpMax(int min=-1, int max=-1);
     WFFitResults           GetInterpolatedAmpMax(int min=-1, int max=-1, int nFitSamples=7);
-    pair<float, float>     GetTime(string method, vector<float>& params); 
-    pair<float, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
-    pair<float, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
+    pair< pair<float, float>, float>     GetTime(string method, vector<float>& params); 
+    pair< pair<float, float>, float>     GetTimeCF(float frac, int nFitSamples=5, int min=-1, int max=-1);
+    pair< pair<float, float>, float>     GetTimeLE(float thr, int nmFitSamples=1, int npFitSamples=3, int min=-1, int max=-1);
     float                  GetIntegral(int min=-1, int max=-1);
     float                  GetModIntegral(int min=-1, int max=-1);
     virtual float          GetSignalIntegral(int riseWin, int fallWin);
@@ -72,6 +72,7 @@ public:
     void                   EmulatedWF(WFClass& wf, float rms, float amplitude, float time);
     void                   FFT(WFClass& wf, float tau, int cut);
     void                   Print();
+    float                  GetTriggerRef();
     //---operators---
     WFClass&               operator=(const WFClass& origin);
     WFClass                operator-(const WFClass& sub);
@@ -100,11 +101,15 @@ protected:
     float          baseline_;
     float          bRMS_;
     int            cfSample_;
+    int            cfSampleMirror_;
     float          cfFrac_;
     float          cfTime_;
+    float          cfTimeMirror_;
     int            leSample_;
+    int            leSampleMirror_;
     float          leThr_;
     float          leTime_;
+    float          leTimeMirror_;
     float          chi2cf_;
     float          chi2le_;
     int            fWinMin_;

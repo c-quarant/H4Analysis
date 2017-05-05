@@ -66,17 +66,10 @@ void ReadInputFiles(CfgManager& opts, TChain* inTree)
     }else{   
      if(path.find("/eos/cms") != string::npos)
         ls_command = string("gfal-ls root://eoscms/"+path+run+" | grep 'root' > tmp/"+run+".list");
-<<<<<<< HEAD
-    else if(path.find("srm://") != string::npos)
-        ls_command = string("echo "+path+run+"/`gfal-ls "+path+run+
-                            "` | sed -e 's:^.*\\/cms\\/:root\\:\\/\\/xrootd-cms.infn.it\\/\\/:g' | grep 'root' > tmp/"+run+".list");
-    else
-=======
      else if(path.find("srm://") != string::npos)
         ls_command = string("lcg-ls "+path+run+
                             " | sed -e 's:^.*\\/cms\\/:root\\:\\/\\/xrootd-cms.infn.it\\/\\/:g' | grep 'root' > tmp/"+run+".list");
      else
->>>>>>> bmarzocc/master
         ls_command = string("ls "+path+run+" | grep 'root' > tmp/"+run+".list");
      system(ls_command.c_str());
      ifstream waveList(string("tmp/"+run+".list").c_str(), ios::in);
@@ -199,19 +192,12 @@ int main(int argc, char* argv[])
             TrackProcess(cpu, mem, vsz, rss);
         }
 
-<<<<<<< HEAD
-        //---call ProcessEvent for each plugin and check the return status
-        bool status=true;
-        for(auto& plugin : pluginSequence)
-            if(status)
-                status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
-=======
+
         //---call ProcessEvent for each plugin
         bool status=true;
         for(auto& plugin : pluginSequence)
             if(status)
                status = plugin->ProcessEvent(h4Tree, pluginMap, opts);
->>>>>>> bmarzocc/master
 
         //---fill the main tree with info variables and increase event counter
         if(status)

@@ -34,7 +34,7 @@ void DeltaXY(std::string FileIn, std::string detector)
 	Nentries = h4->GetEntries();
 	
 	TH1F *h1 = new TH1F("h1", "", 80, -5, 2);
-	auto *h2 = new TH1F("h2", "", 128, -16, 16, -10, 10);
+	auto *h2 = new TProfile("h2", "", 128, -16, 16, -10, 10);
 
 	//DeltaX histogram
 	h4->Draw("(X[0]-X[1])>>h1", "X[0]>-800 && X[1]>-800");
@@ -64,7 +64,7 @@ void DeltaXY(std::string FileIn, std::string detector)
 	h4->Draw("(X[0]-X[1]):X[0]>>h2", "X[0]>-800 && X[1]>-800");
 	
 	TCanvas *c2 = new TCanvas("c2", "c2");
-	TH2F* H2 = new TH2F("H2","", 128, -16, 16, 50, 0, (h2->GetMaximum())*1.05);     
+	TH2F* H2 = new TH2F("H2","", 128, -16, 16, 100, -5, 5);     
 	H2->GetXaxis()->SetTitle("X[0]");    
  	H2->GetYaxis()->SetTitle("X[0]-X[1]");
   
@@ -91,5 +91,21 @@ void DeltaXY(std::string FileIn, std::string detector)
   
   
   	c3->SaveAs(fileOutpdf.c_str());
+  	c3->SaveAs(fileOutpng.c_str());
+ 
+	//Drawing DeltaY vs Y0 histogram
+	h4->Draw("(Y[0]-Y[1]):Y[0]>>h2", "Y[0]>-800 && Y[1]>-800");
+	
+	TCanvas *c4 = new TCanvas("c4", "c4");
+	H2->GetXaxis()->SetTitle("Y[0]");    
+ 	H2->GetYaxis()->SetTitle("Y[0]-Y[1]");
+  
+	H2->Draw();	
+	h2->Draw("SAME");
+  
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/DeltaY/DYvsY0_" + detector + "_G" + Gain + "_" + Energy + "Gev.pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/DeltaY/DYvsY0_" + detector + "_G" + Gain + "_" + Energy + "Gev.png";
+
+	c3->SaveAs(fileOutpdf.c_str());
   	c3->SaveAs(fileOutpng.c_str());
 }	

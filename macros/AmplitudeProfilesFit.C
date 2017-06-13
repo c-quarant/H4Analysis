@@ -25,9 +25,9 @@
 #include <math.h>
 
 float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis);
-void 
+float AmplitudeProfilesFit(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis, std:string AxisShift, std::string bound, std::string plane);
 
-void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t bound)
+void AllAmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t bound)
 {
 	Int_t Nentries, i, CH, C3=0, C0APD1=0, C0APD2=0, runNum, hodoCfg;
 	Float_t X[2], Y[2], Ampl[6];
@@ -66,6 +66,7 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
 	std::string fileOutpng;
 	std::string RunStats = Energy+"Gev_G"+Gain+"_"+std::to_string(runNum);
 	
+	//Calculating shift of hodo plane 1 respect to hodo plane 0 faro X and Y axis
 	Xshift = HodoPlaneShift(h4, detector, pathToLinFitOutput, RunStats, "X");
 	Yshift = HodoPlaneShift(h4, detector, pathToLinFitOutput, RunStats, "Y");
 
@@ -189,7 +190,7 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
  	H1->GetYaxis()->SetTitle("amp_max");
 
 	H1->Draw();  
-	AmpYavg->Fit("pol2", "", "", -fitRange, fitRange);		
+	AmpYavg->Fit("pol2", "Q", "", -fitRange, fitRange);		
 	AmpYavg->Draw("SAME");
 	
 	TF1* fitResY = AmpYavg->GetFunction("pol2");
@@ -217,7 +218,7 @@ float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std
  	Hset->GetYaxis()->SetTitle((axis+"[0]-"+axis+"[1]").c_str());
   
 	Hset->Draw();	
-	DXvsX->Fit("pol1", "", "", -4, 4);
+	DXvsX->Fit("pol1", "Q", "", -4, 4);
 	DXvsX->Draw("SAME");
 	
 	std::string fileOutpdf = pathToOut + "Delta"+axis+"/D"+axis+"vs"+axis+"_" + detector + "_" + RunStats + ".pdf";
@@ -228,3 +229,32 @@ float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std
 
 	return DXvsX->GetFunction("pol1")->GetParameter(0);
 }
+
+float AmplitudeProfilesFit(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis, std::string AxisShift, std::string bound, std::string plane)
+{
+	float fitrange=4;
+	auto *AmpHist = new TProfile("AmpX"+plane+"", "", 32, -16, 16, 0, 10000);
+
+	varexp = "amp_max["+detector+"]:(X["+plane+"]"+AxisShift+")>>AmpX"+plane+"";
+	selection = "Y["+plane+"]+("+AxisShift+ ")>-"+bound+" && Y["+plane+"]+("+AxisShift+")<"+bound;
+	cout << varexp << endl;
+	cout << selectrion << endl;
+
+	h4->Draw(varexp.c_str(), selection.c_str());
+	
+	TCanvas* c3 = new TCanvas("c3","c3");
+ 	H1->GetXaxis()->SetTitle("X["+plane+"]");    
+ 	H1->GetYaxis()->SetTitle("amp_max");
+  
+	H1->Draw();
+	AmpX1->Fit("pol2", "", "", -fitRange, fitRange);		
+	AmpX1->Draw("SAME");
+  
+	fileOutpdf = pathToOut + "p1/" + Energy + "Gev/" + "AmpX1_" + std::to_string(runNum) + "_" + detector + "_G" + Gain + ".pdf";
+  	fileOutpng = pathToOut + "p1/" + Energy + "Gev/" + "AmpX1_" + std::to_string(runNum) + "_" + detector + "_G" + Gain + ".png";
+  
+  
+  	c3->SaveAs(fileOutpdf.c_str());
+  	c3->SaveAs(fileOutpng.c_str());
+}
+

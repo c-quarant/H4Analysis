@@ -18,13 +18,13 @@ treeName   info
 trackedVariable h4reco.run
 mappedVars  CHGain Energy MBVolt
 
-originValues 5784 5785 5786
+originValues 5801 5802 5803 5823
 
-CHGain        200  100  050\
+CHGain        050  100  200  200\
 
-Energy        020  020  020\
+Energy        050  050  050  050\
 
-MBVolt        384  373  355\
+MBVolt        355  373  384  384\
        
 </AdditionalInfo>
 

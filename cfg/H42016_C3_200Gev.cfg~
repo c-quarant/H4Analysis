@@ -18,13 +18,13 @@ treeName   info
 trackedVariable h4reco.run
 mappedVars  CHGain Energy MBVolt
 
-originValues 5784 5785 5786
+originValues 5879 5880 5881 5889 5890 5891
 
-CHGain        200  100  050\
+CHGain        050  100  200  050  100  200\
 
-Energy        020  020  020\
+Energy        200  200  200  200  200  200\
 
-MBVolt        384  373  355\
+MBVolt        355  373  384  355  373  384\
        
 </AdditionalInfo>
 
@@ -95,8 +95,8 @@ polarity -1
 </MCP2>
 
 <Void>
-digiGroup 0
-digiChannel 0
+digiGroup 2
+digiChannel 5
 polarity -1
 baselineWin 1 150
 baselineInt 30 50

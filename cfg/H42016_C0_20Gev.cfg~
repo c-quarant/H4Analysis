@@ -1,7 +1,7 @@
 #---MAIN
 <h4reco>
 #nome output
-outNameSuffix /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/ntuples/H42016_C3_C0_
+outNameSuffix /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/ntuples/H42016_C0_
 #outNameSuffix /tmp/bmarzocc/h42014_50GeV_scan5_
 #outNameSuffix /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/TimingTB_BTF_Jun2016/ntuples/v1/h42014_50GeV_scan5_
 path2data /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/ECALTB_H4_Jul2016/raw/DataTree/
@@ -16,19 +16,15 @@ maxFiles -1
 pluginType InfoTreeMaker
 treeName   info
 trackedVariable h4reco.run
-mappedVars  C3Gain C0Gain Energy MBtop MBbot
+mappedVars  CHGain Energy MBVolt
 
-originValues 5777 5778 5779 5780 5781 5782
+originValues 5780 5781 5782
 
-C3Gain         50  100  200    0    0    0\
+CHGain        200  100  050\
 
-C0Gain          0    0    0   50  100  200\
+Energy        020  020  020\
 
-Energy        100  100  100  100  100  100\
-
-MBtop         355  373  384    0    0    0\
-
-MBbot           0    0    0  405  424  434\
+MBVolt        434  424  405\
        
 </AdditionalInfo>
 
@@ -52,7 +48,7 @@ threshold 1000
 #---Digitizer config
 <DigiReco>
 pluginType DigitizerReco
-channelsNames C3 MCP1 MCP2 C0APD1 C0APD2 Void
+channelsNames MCP1 MCP2 C0APD1 C0APD2 Void
 
 nSamples   1024
 tUnit      0.2
@@ -71,10 +67,10 @@ WFtreePrescale 1
 </WFReco>
 
 #---DIGI CHANNELS
-<C3>
+<MCP1>
 digiGroup 2
-digiChannel 2
-polarity +1
+digiChannel 0
+polarity -1
 subtractChannel Void
 baselineWin 10 30
 baselineInt 30 50
@@ -84,28 +80,24 @@ CFD 0.5 5
 LED50 50 0 3
 LED100 100 0 3
 LED150 150 0 3
-</C3>
-
-<MCP1= C3>
-digiGroup 2
-digiChannel 0
-polarity -1
 </MCP1>
 
-<MCP2= C3>
+<MCP2= MCP1>
 digiGroup 2
 digiChannel 1
 polarity -1
 </MCP2>
 
-<C0APD1= C3>
+<C0APD1= MCP1>
 digiGroup 2
-digiChannel 6 
+digiChannel 6
+polarity +1 
 </C0APD1>
 
-<C0APD2= C3>
+<C0APD2= MCP1>
 digiGroup 2
-digiChannel 7 
+digiChannel 7
+polarity +1
 </C0APD2>
 
 <Void>

@@ -25,7 +25,7 @@
 #include <fstream>
 #include <math.h>
 
-void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float YMax, float range, std::string pathToOutput, std::string RunStats);
+void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float YMax, float range, std::string pathToOutput, std::string RunStats, std::string runNum);
 float MeanTimeMCP(TTree* h4, std::string Selection, std::string pathToOut, std::string RunStats);
 float MeanTimeShift(TTree* h4, std::string detector, std::string Selection, std::string pathToOut, std::string RunStats);
 
@@ -58,20 +58,23 @@ void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound)
 
 	AmplitudeProfilesFit(FileIn, detector, bound, &XMax, &YMax);
 	
-	if(fabs(XMax)<3 && fabs(YMax)<3)
+	if(fabs(XMax)<100 && fabs(YMax)<100)
 	{
-		PulseShapes(h4, detector, 0, XMax, YMax, 2, pathToOutput, RunStats);
+		PulseShapes(h4, detector, 0, XMax, YMax, 2, pathToOutput, RunStats, std::to_string(runNum));
 	}
 	else cout<< "SBALLATO!" << endl;
 	
 }
 
 
-void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float YMax, float range, std::string pathToOutput, std::string RunStats)
+void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float YMax, float range, std::string pathToOutput, std::string RunStats, std::string runNum)
 {
+	float AmpMean, AmpSigma;
+
 	std::string TimeShift;
 	std::string TimeMCP;
-	std::string AmpThresh;
+	std::string AmpMean_str;
+	std::string AmpSigma_str;
 
 	TProfile2D* p2D_amp_vs_time = new TProfile2D("p2D_amp_vs_time", "", 300, -10, 40, 300, -0.5, 1.5, 0., 10000.);
 	TH2F* h2_amp_vs_time = new TH2F("h2_amp_vs_time", "", 300, -10, 40, 300, -0.5, 1.5);
@@ -81,12 +84,13 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"PulseShapes/", RunStats));
 	Selection = Selection + " && fabs(time[MCP1]-("+TimeMCP+"))<7";
 
-	AmpThresh = std::to_string(AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats));	
-	Selection = Selection + " && amp_max["+detector+"]>"+AmpThresh;	
+	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	AmpMean_str = std::to_string(AmpMean);
+	AmpSigma_str = std::to_string(AmpSigma);	
+	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
 	
 	TimeShift = std::to_string(MeanTimeShift(h4, detector, Selection, pathToOutput+"PulseShapes/", RunStats));
 	Selection = "WF_ch == " + detector + " && " + Selection;	
-
 	
 	cout << Selection << endl;
         h4->Draw(("amp_max["+detector+"]:WF_val/amp_max["+detector+"]:WF_time-time[MCP1]-("+TimeShift+")>>p2D_amp_vs_time").c_str(),Selection.c_str());
@@ -95,16 +99,10 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	h4->Draw(("WF_val/amp_max["+detector+"]:WF_time-time[MCP1]-("+TimeShift+") >> h2_amp_vs_time").c_str(),Selection.c_str());
 	cout << "Draw 2" << endl;
 
-    	TProfile* waveForm = h2_amp_vs_time->ProfileX(); 
-    	waveForm->SetName("Waveform");
-	
 	TObjArray aSlices;
 	h2_amp_vs_time->FitSlicesY(0, 0, -1, 0, "QNR", &aSlices);
-	TCanvas* c0 = new TCanvas();
-    	c0->cd();
-    	aSlices[1]->Draw();
-    	c0 -> SaveAs(std::string(pathToOutput+"TestFitSlices/PS_"+detector+"_"+RunStats+"_h2_fit_slicesY.png").c_str());
-    	c0 -> SaveAs(std::string(pathToOutput+"TestFitSlices/PS_"+detector+"_"+RunStats+"_h2_fit_slicesY.pdf").c_str());
+	
+	TProfile *waveForm = (TProfile*)aSlices[1];
 
 	p2D_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time[MCP1] (ns)")).c_str());
     	h2_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time[MCP1] (ns)")).c_str());
@@ -129,17 +127,18 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
     	c2 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_Amp.png").c_str(),"png");
     	c2 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_Amp.pdf").c_str(),"pdf");
 	
-    	TCanvas* c3 = new TCanvas();
-    	c3->cd();
-    	waveForm->Draw("P");
-    	c3 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_profile.png").c_str(),"png");
-    	c3 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_profile.pdf").c_str(),"pdf");
-	
+	TCanvas* c0 = new TCanvas();
+    	c0->cd();
+	waveForm->SetName("Waveform_");
+    	waveForm->Draw();
+    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_profile.png").c_str());
+    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_profile.pdf").c_str());    	
+
     	TFile* output_Waveform = new TFile(std::string("WaveForms/"+detector+"_"+RunStats+"_Waveform.root").c_str(),"RECREATE");
     	output_Waveform->cd();
 	
-	p2D_amp_vs_time->SetName("Profile2DWaveforms");
-	h2_amp_vs_time->SetName("H2Waveforms");
+	p2D_amp_vs_time->SetName("Profile2DWaveforms_");
+	h2_amp_vs_time->SetName("H2Waveforms_");
 
 	p2D_amp_vs_time->Write();
     	h2_amp_vs_time->Write();

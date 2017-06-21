@@ -50,11 +50,10 @@ void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound)
 	h4->GetEntry(0);
 	CH=h4->GetLeaf(detector.c_str())->GetValue(0);
 	Nentries = h4->GetEntries();
-	runNum = h4->GetLeaf("run")->GetValue(0);
 
 	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
 	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
-	std::string RunStats = Energy+"Gev_G"+Gain+"_"+std::to_string(runNum);
+	std::string RunStats = Energy+"Gev_G"+Gain;
 
 	AmplitudeProfilesFit(FileIn, detector, bound, &XMax, &YMax);
 	
@@ -69,6 +68,7 @@ void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound)
 
 void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float YMax, float range, std::string pathToOutput, std::string RunStats, std::string runNum)
 {
+	int i;
 	float AmpMean, AmpSigma;
 
 	std::string TimeShift;
@@ -102,7 +102,8 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	TObjArray aSlices;
 	h2_amp_vs_time->FitSlicesY(0, 0, -1, 0, "QNR", &aSlices);
 	
-	TProfile *waveForm = (TProfile*)aSlices[1];
+	TProfile *waveForm = new TProfile("waveForm", "", 300, -10, 40);
+	waveForm = (TProfile*)aSlices[1];
 
 	p2D_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time[MCP1] (ns)")).c_str());
     	h2_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time[MCP1] (ns)")).c_str());

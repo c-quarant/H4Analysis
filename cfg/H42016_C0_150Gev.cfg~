@@ -1,0 +1,116 @@
+#---MAIN
+<h4reco>
+#nome output
+outNameSuffix /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/ntuples/H42016_C0_
+#outNameSuffix /tmp/bmarzocc/h42014_50GeV_scan5_
+#outNameSuffix /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/TimingTB_BTF_Jun2016/ntuples/v1/h42014_50GeV_scan5_
+path2data /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/ECALTB_H4_Jul2016/raw/DataTree/
+#path2data /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/DataTree/
+pluginList AdditionalInfo ADC Hodo DigiReco WFReco
+run 2330
+maxEvents -1
+maxFiles -1
+</h4reco>
+
+#---HV info
+<AdditionalInfo>
+pluginType InfoTreeMaker
+treeName   info
+trackedVariable h4reco.run
+mappedVars  CHGain Energy MBVolt
+
+originValues 5899 5901 5903
+
+CHGain        200  100  050\
+
+Energy        150  150  150\
+
+MBVolt        434  424  405\
+       
+</AdditionalInfo>
+
+#---ADC
+<ADC>
+pluginType ADCReco
+chNames scint
+</ADC>
+
+<scint>
+boardNum 100728833
+channelNum 0
+</scint>
+
+#--- hodoscope
+<Hodo>
+pluginType HodoReco
+threshold 1000
+</Hodo>
+
+#---Digitizer config
+<DigiReco>
+pluginType DigitizerReco
+channelsNames MCP1 MCP2 C0APD1 C0APD2 Void
+
+nSamples   1024
+tUnit      0.2
+</DigiReco>
+
+#---Digitizer config
+<WFReco>
+pluginType WFAnalyzer
+srcInstanceName DigiReco
+channelsNames= DigiReco.channelsNames
+timeRecoTypes CFD LED50 LED100 LED150
+#CFD mezza altezza LED50 soglia costante a 50-100-150
+
+fillWFtree 1
+WFtreePrescale 1
+</WFReco>
+
+#---DIGI CHANNELS
+<MCP1>
+digiGroup 2
+digiChannel 0
+polarity -1
+subtractChannel Void
+baselineWin 10 30
+baselineInt 30 50
+signalWin 50 500 7
+signalInt 10 10
+CFD 0.5 5
+LED50 50 0 3
+LED100 100 0 3
+LED150 150 0 3
+</MCP1>
+
+<MCP2= MCP1>
+digiGroup 2
+digiChannel 1
+polarity -1
+</MCP2>
+
+<C0APD1= MCP1>
+digiGroup 2
+digiChannel 6
+polarity +1 
+</C0APD1>
+
+<C0APD2= MCP1>
+digiGroup 2
+digiChannel 7
+polarity +1
+</C0APD2>
+
+<Void>
+digiGroup 2
+digiChannel 5
+polarity -1
+baselineWin 1 150
+baselineInt 30 50
+signalWin 150 1000 7
+signalInt 10 10
+CFD 0.5 5
+LED50 50 0 3
+LED100 100 0 3
+LED150 150 0 3
+</Void>

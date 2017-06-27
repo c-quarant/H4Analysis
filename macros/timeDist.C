@@ -9,117 +9,65 @@
 #include "TLatex.h"
 #include "TGraphAsymmErrors.h"
 #include <iostream>
-#include "FPCanvasStyle.C"
-#include "setStyle.C"
 #include "TGaxis.h"
 #include "TPaletteAxis.h"
-
+#include "AveragePulseShape.C"
 #include <string>
 #include <fstream>
 
-void timeDist(std::string FileIN, std::string detector, std::string cutValue, std::string run)
+void timeDist(std::string FileIn, std::string detector, Float_t bound, std::string MCP)
 {
-	gStyle->SetOptStat(0);
-	
-
-	TFile *f = TFile::Open(FileIN.c_str());
+	float XMax, YMax, Xshift, Yshift, AmpMean, AmpSigma;
+	std::string TimeMCP, TimeShift, AmpMean_str, AmpSigma_str; 
+	TFile *f = TFile::Open(FileIn.c_str());
 	TTree *h4 = (TTree*)f->Get("h4");
 	
+	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/";
 	
-	//plot eff
-	TH2F *h_num = new TH2F("h_num", "", 64, -32, 32, 64, -32, 32);
-	TH2F *h_denum = new TH2F("h_denum", "", 64, -32, 32, 64, -32, 32);
-	TH2F *h_eff = new TH2F("h_eff", "", 64, -32, 32, 64, -32, 32);
-	
-	std::string cut="amp_max[" + detector + "]>" + cutValue + " && X[0]>-800 && Y[0]>-800";
-	
-	h4->Draw("Y[0]:X[0] >> h_num", cut.c_str());
-        h4->Draw("Y[0]:X[0] >> h_denum","X[0]>-800 && Y[0]>-800");  
-	h_eff->Divide(h_num,h_denum,1,1,"B");
+	h4->GetEntry(0);
+	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
+	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
+	std::string RunStats = Energy+"Gev_G"+Gain;
 
-	TCanvas* c3 = new TCanvas("c3","c3");
-	TH2F* H3 = new TH2F("H3","", 64, -32, 32, 64, -32, 32);     
-        H3->GetXaxis()->SetTitle("X");    
-	H3->GetYaxis()->SetTitle("Y");
+	//plot detector time distribution
+	Xshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "X");
+	Yshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "Y");
 	
-	H3->Draw();	
-	h_eff->Draw("COLZ SAME");
-	
-	std::string plotEffpdf = "Eff_" + detector + "_" + cutValue + "_" + run  + ".pdf";
-	c3->SaveAs(plotEffpdf.c_str());
-	
-	std::string plotEffpng = "Eff_" + detector + "_" + cutValue + "_" + run  + ".png";
-	c3->SaveAs(plotEffpng.c_str());
+	AmplitudeProfilesFit(FileIn, detector, bound, &XMax, &YMax);
 
-	//plot time distribution ref MCP1 
-	TH1F *h1 = new TH1F("h1", "", 100, -5, 0.5);
-	std::string sel1="(time[" + detector + "]-time[MCP1])>>h1";
-	cut = "amp_max[" + detector + "]>" + cutValue;
-	cout << cut << endl;	
-	h4->Draw(sel1.c_str(), cut.c_str());
+	//std::string Selection = "(fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" || fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+") && (fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+" || fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+") && amp_max["+MCP+"]>100";
 	
-	setStyle();      
-	TH2F* H1 = new TH2F("H1","", 100, -5, 0.5, 20, 0, (h1->GetMaximum()*(1.05)));     
-        H1->GetXaxis()->SetTitle("time ns");    
-	H1->GetYaxis()->SetTitle("events");
+	std::string Selection = "fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" && fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+  " && amp_max["+MCP+"]>100";
 
+	//std::string Selection = "fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+" && fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+" && amp_max["+MCP+"]>100";
+
+	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"time_dist/", RunStats, MCP));
+	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<7";
+
+	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	AmpMean_str = std::to_string(AmpMean);
+	AmpSigma_str = std::to_string(AmpSigma);	
+	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
+	//Selection = "WF_ch == " + detector + " && " + Selection;	
+	
+	cout << Selection << endl;
+
+	TH1F* tD = new TH1F("tD", "", 500, -5, 5);
+	h4->Draw(("time["+detector+"]-time["+MCP+"]>>tD").c_str(), Selection.c_str());
+	
+	TCanvas* c0 = new TCanvas("c0", "c0");
+	tD->Fit("gaus", "", "", 2.5, 4);
+	tD->Draw();
+	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/Time_"+detector+"_"+RunStats+"_"+MCP+".png").c_str());
+	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/Time_"+detector+"_"+RunStats+"_"+MCP+".pdf").c_str());
+
+	TH1F* tD1 = new TH1F("tD1", "", 500, -5, 5);
+	h4->Draw(("time["+detector+"]-time["+MCP+"]>>tD1").c_str());
+	
 	TCanvas* c1 = new TCanvas("c1", "c1");
-	FPCanvasStyle(c1);
-	
-	H1->Draw();
-	h1->Draw("h1 SAME");
-
-	std::string plotnamepdf = "TimeDist_" + run + "_" + detector + "-MPC1.pdf"; 
-	std::string plotnamepng = "TimeDist_" + run + "_" + detector + "-MPC1.png"; 
-	
-	c1->SaveAs(plotnamepdf.c_str());	
-	c1->SaveAs(plotnamepng.c_str());	
-	
-	//plot time distribution ref MCP2
-	TH1F *h2 = new TH1F("h2", "", 100, -0.5, 5);
-	std::string sel2="(time[" + detector + "]-time[MCP2])>>h2";
-	h4->Draw(sel2.c_str());
-
-	setStyle();
-	TH2F* H2 = new TH2F("H2","", 100, -0.5, 5, 20, 0, (h1->GetMaximum()*1.05));     
-        H2->GetXaxis()->SetTitle("time ns");    
-	H2->GetYaxis()->SetTitle("events");
-
-	TCanvas* c2 = new TCanvas("c2", "c2");
-	FPCanvasStyle(c2);
-
-	H2->Draw();
-	h2->Draw("h2 SAME");
-
-	plotnamepdf = "TimeDist_" + run + "_" + detector + "-MPC2.pdf"; 
-	plotnamepng = "TimeDist_" + run + "_" + detector + "-MPC2.png"; 
-	
-	c2->SaveAs(plotnamepdf.c_str());	
-	c2->SaveAs(plotnamepng.c_str());
-	
-	
-	//plot amplitude
-	std::string ampl = "amp_max[" + detector + "]>>hAmpl";
-	TH1F *hAmpl = new TH1F("hAmpl","", 800, -50, 10000);
-	h4->Draw(ampl.c_str());
-	
-	setStyle();
-	TCanvas* c4 = new TCanvas("c4","c4");
-	TH2F* H4 = new TH2F("H4","", 100, -50, (hAmpl->GetXaxis()->GetBinCenter(hAmpl->GetMaximumBin())*1.3), 64, 0, (hAmpl->GetMaximum()*1.1));     
-	std::string xtit = "amp_max[" + detector + "]";        
-	H4->GetXaxis()->SetTitle(xtit.c_str());    
-	H4->GetYaxis()->SetTitle("events");
-	FPCanvasStyle(c4);	
-
-	H4->Draw();
-	hAmpl->Draw("H4 SAME");
-
-	std::string plotAmplpdf = "Amp_" + run + "_" + detector  + ".pdf";
-	c4->SaveAs(plotAmplpdf.c_str());
-	
-	std::string plotAmplpng = "Amp_" + run + "_" + detector  + ".png";
-	c4->SaveAs(plotAmplpng.c_str());
-
-
+	tD1->Fit("gaus", "", "", 2.5, 4);
+	tD1->Draw();
+	c1->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/TimeNoCut_"+detector+"_"+RunStats+"_"+MCP+".png").c_str());
+	c1->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/TimeNoCut_"+detector+"_"+RunStats+"_"+MCP+".pdf").c_str());
 }
 	

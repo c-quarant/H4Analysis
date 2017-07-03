@@ -43,8 +43,9 @@ void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound, 
 	gStyle->SetOptFit();
 
 	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/";
-
+	cout << "ciao" << endl;
 	TFile *f = TFile::Open(FileIn.c_str());
+	cout << "ciao" << endl;
 	TTree *h4 = (TTree*)f->Get("h4");
 	
 	h4->GetEntry(0);
@@ -54,6 +55,7 @@ void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound, 
 	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
 	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
 	std::string RunStats = "E"+Energy+"_G"+Gain;
+	cout << "ciao" << endl;
 
 	AmplitudeProfilesFit(FileIn, detector, bound, &XMax, &YMax);
 	

@@ -207,7 +207,7 @@ float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std
 
 	//Fitting and Drawing DeltaX
 	TCanvas *cDeltaX = new TCanvas(("cDelta"+axis+"").c_str(), ("cDelta"+axis+"").c_str());
-	TH2F* Hset = new TH2F(("Hset"+axis).c_str(),"", 128, -16, 16, 100, -5, 5);     
+	TH2F* Hset = new TH2F("Hset","", 128, -16, 16, 100, -5, 5);     
 	Hset->GetXaxis()->SetTitle((axis+"[0]").c_str());    
  	Hset->GetYaxis()->SetTitle((axis+"[0]-"+axis+"[1]").c_str());
   

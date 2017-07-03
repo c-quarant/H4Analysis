@@ -12,18 +12,22 @@
 #include "TLatex.h"
 #include "TGraphAsymmErrors.h"
 #include <iostream>
+#include "FPCanvasStyle.C"
+#include "setStyle.C"
 #include "TGaxis.h"
 #include "TPaletteAxis.h"
 #include "stdio.h"
 #include "TProfile.h"
 #include "TProfile2D.h"
+#include "AmplitudeHist.C"
 #include <string>
 #include <fstream>
 #include <math.h>
 
 float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis);
+float AmplitudeProfilesFit(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis, std:string Xshift, std:string Yshift,  std::string bound, std::string plane);
 
-void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t bound, float* XMax, float* YMax)
+void AllAmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t bound)
 {
 	Int_t Nentries, i, CH, C3=0, C0APD1=0, C0APD2=0, runNum, hodoCfg;
 	Float_t X[2], Y[2], Ampl[6];
@@ -31,10 +35,11 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
 	Float_t Gain_val, Energy_val;
 
 	float fitRange=5;
+	//setStyle();
 	gStyle->SetOptStat();
 	gStyle->SetOptFit();
 
-	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/Amplitude_profiles/";
+	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/Amplitude_profilesNew/";
 	std::string pathToLinFitOutput = "/afs/cern.ch/user/c/cquarant/www/";
 
 	TFile *f = TFile::Open(FileIn.c_str());
@@ -44,24 +49,24 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
 	CH=h4->GetLeaf(detector.c_str())->GetValue(0);
 	Nentries = h4->GetEntries();
 	runNum = h4->GetLeaf("run")->GetValue(0);
-
-	auto *AmpX0 = new TProfile("AmpX0", "", 32, -16, 16, 0, 10000);
-	auto *AmpY0 = new TProfile("AmpY0", "", 32, -16, 16, 0, 10000);
-	auto *AmpX1 = new TProfile("AmpX1", "", 32, -16, 16, 0, 10000);
-	auto *AmpY1 = new TProfile("AmpY1", "", 32, -16, 16, 0, 10000);
-	auto *AmpXavg = new TProfile("AmpXavg", "", 32, -16, 16, 0, 10000);
-	auto *AmpYavg = new TProfile("AmpYavg", "", 32, -16, 16, 0, 10000);
-	
 	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
 	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
 	std::string fileOutpdf;
 	std::string fileOutpng;
 	std::string RunStats = Energy+"Gev_G"+Gain+"_"+std::to_string(runNum);
-	
 	//Calculating shift of hodo plane 1 respect to hodo plane 0 faro X and Y axis
 	Xshift = HodoPlaneShift(h4, detector, pathToLinFitOutput, RunStats, "X");
 	Yshift = HodoPlaneShift(h4, detector, pathToLinFitOutput, RunStats, "Y");
 
+	//Filling Amplitude profile histograms Draw method
+	std::string bound_str = std::to_string(bound);
+	std::string Xshift_str = std::to_string(Xshift);
+	std::string Yshift_str = std::to_string(Yshift);
+
+	AmplitudeProfileFit(h4, detector, pathToOutput, RunStats, "X",  
+
+
+	/*
 	//Filling Amplitude profile histograms Draw method
 	std::string bound_str = std::to_string(bound);
 	std::string Xshift_str = std::to_string(Xshift);
@@ -182,7 +187,7 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
  	H1->GetYaxis()->SetTitle("amp_max");
 
 	H1->Draw();  
-	AmpYavg->Fit("pol2", "", "", -fitRange, fitRange);		
+	AmpYavg->Fit("pol2", "Q", "", -fitRange, fitRange);		
 	AmpYavg->Draw("SAME");
 	
 	TF1* fitResY = AmpYavg->GetFunction("pol2");
@@ -193,21 +198,20 @@ void AmplitudeProfilesFit(std::string FileIn, std::string detector, Float_t boun
     
   	c6->SaveAs(fileOutpdf.c_str());
   	c6->SaveAs(fileOutpng.c_str());
+	*/
 
-	*XMax = fitResX->GetMaximumX();
-	*YMax = fitResY->GetMaximumX();
 }
 
 float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std::string RunStats, std::string axis)
 {
-	auto *DXvsX = new TProfile(("D"+axis+"vs"+axis+"").c_str(), "", 128, -16, 16, -10, 10);
+	auto *DXvsX = new TProfile("DXvsX", "", 128, -16, 16, -10, 10);
 
 	//Filling DeltaX histogram
-	h4->Draw(("("+axis+"[0]-"+axis+"[1]):"+axis+"[0]>>D"+axis+"vs"+axis+"").c_str(), (axis+"[0]>-800 && "+axis+"[1]>-800").c_str());
+	h4->Draw(("("+axis+"[0]-"+axis+"[1]):"+axis+"[0]>>DXvsX").c_str(), (axis+"[0]>-800 && "+axis+"[1]>-800").c_str());
 
 	//Fitting and Drawing DeltaX
-	TCanvas *cDeltaX = new TCanvas(("cDelta"+axis+"").c_str(), ("cDelta"+axis+"").c_str());
-	TH2F* Hset = new TH2F(("Hset"+axis).c_str(),"", 128, -16, 16, 100, -5, 5);     
+	TCanvas *cDeltaX = new TCanvas("cDeltaX", "cDeltaX");
+	TH2F* Hset = new TH2F("Hset","", 128, -16, 16, 100, -5, 5);     
 	Hset->GetXaxis()->SetTitle((axis+"[0]").c_str());    
  	Hset->GetYaxis()->SetTitle((axis+"[0]-"+axis+"[1]").c_str());
   
@@ -223,3 +227,33 @@ float HodoPlaneShift(TTree* h4, std::string detector, std::string pathToOut, std
 
 	return DXvsX->GetFunction("pol1")->GetParameter(0);
 }
+
+float AmplitudeProfilesFit(TTree* h4, std::string detector, std::string pathToOut, std::string axis, std::string Xshift, std::string Yshift, std::string bound, std::string plane)
+{
+	float fitrange=4;
+	auto *AmpHist = new TProfile(("Amp"+axis+plane).c_str(), "", 32, -16, 16, 0, 10000);
+
+	varexp = "amp_max["+detector+"]:(X["+plane+"]"+AxisShift+")>>AmpX"+plane+"";
+	selection = "Y["+plane+"]+("+AxisShift+ ")>-"+bound+" && Y["+plane+"]+("+AxisShift+")<"+bound;
+	cout << varexp << endl;
+	cout << selectrion << endl;
+
+	h4->Draw(varexp.c_str(), selection.c_str());
+	
+	TCanvas* c3 = new TCanvas("c3","c3");
+ 	H1->GetXaxis()->SetTitle("X["+plane+"]");    
+ 	H1->GetYaxis()->SetTitle("amp_max");
+  
+	H1->Draw();
+	AmpX1->Fit("pol2", "Q", "", -fitRange, fitRange);		
+	AmpX1->Draw("SAME");
+  
+	fileOutpdf = pathToOut + "p"+plane+"_" + Energy + "Gev_" + "Amp"+axis+plane+"_" + std::to_string(runNum) + "_" + detector + "_G" + Gain + ".pdf";
+  	fileOutpng = pathToOut + "p"+plane+"_" + Energy + "Gev_" + "Amp"+axis+plane+"_" + std::to_string(runNum) + "_" + detector + "_G" + Gain + ".png";
+    
+  	c3->SaveAs(fileOutpdf.c_str());
+  	c3->SaveAs(fileOutpng.c_str());
+
+	return AmpHist->GetFunction("pol2")->GetMaximumX();
+}
+

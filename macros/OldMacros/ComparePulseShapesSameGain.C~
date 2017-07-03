@@ -1,0 +1,74 @@
+#include "TLeaf.h"
+#include "TFile.h"
+#include "TStyle.h"
+#include "TSystem.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+#include "TTree.h" 
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TColor.h"
+#include "TLatex.h"
+#include "TGraphAsymmErrors.h"
+#include <iostream>
+//#include "FPCanvasStyle.C"
+//#include "setStyle.C"
+#include "TGaxis.h"
+#include "TPaletteAxis.h"
+#include "stdio.h"
+#include "TProfile.h"
+#include "TProfile2D.h"
+#include <string>
+#include <fstream>
+#include <math.h>
+
+void ComparePulseShapesSameGain(std::string detector, std::string Gain, std::string run20Gev, std::string run50Gev, std::string run100Gev, std::string run200Gev)
+{
+	gStyle->SetOptStat(0);
+
+	std::string WF_20 = "WaveForms/"+detector+"_20Gev_G"+Gain+"_"+run20Gev+"_Waveform.root";
+	std::string WF_50 = "WaveForms/"+detector+"_50Gev_G"+Gain+"_"+run50Gev+"_Waveform.root";
+	//std::string WF_100 = "WaveForms/"+detector+"_100Gev_G"+Gain+"_"+run100Gev+"_Waveform.root";
+	//std::string WF_200 = "WaveForms/"+detector+"_200Gev_G"+Gain+"_"+run200Gev+"_Waveform.root";
+
+	TFile *f0 = TFile::Open(WF_20.c_str());
+	TFile *f1 = TFile::Open(WF_50.c_str());
+	//TFile *f2 = TFile::Open(WF_100.c_str());
+	//TFile *f3 = TFile::Open(WF_200.c_str());
+
+	TH1D *w0 = (TH1D*)f0->Get("Waveform_");
+	w0->SetTitle("");	
+	TH1D *w1 = (TH1D*)f1->Get("Waveform_");
+	w1->SetTitle("");
+	//TH1D *w2 = (TH1D*)f2->Get("Waveform_");
+	//w2->SetTitle("");
+	//TH1D *w3 = (TH1D*)f3->Get("Waveform_");
+	//w3->SetTitle("");
+
+	TCanvas *c0 = new TCanvas("c0","c0");
+	c0->cd();
+
+	w0->SetLineColor(1);
+	w0->Draw();
+	w1->SetLineColor(2);
+	w1->Draw("SAME");
+	//w2->SetLineColor(3);
+	//w2->Draw("SAME");
+	//w3->SetLineColor(4);
+	//w3->Draw("SAME");
+	
+	TLegend* legend = new TLegend(0.60, 0.7, 0.88, 0.88);
+	legend->AddEntry(w0, "Energy 20 Gev");	
+	legend->AddEntry(w1, "Energy 50 Gev");
+	//legend->AddEntry(w2, "Energy 100 Gev");
+	//legend->AddEntry(w3, "Energy 200 Gev");
+	legend->Draw();
+
+	
+	
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_"+detector+"_Gain"+Gain+".pdf").c_str());
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_"+detector+"_Gain"+Gain+".png").c_str());
+
+
+}

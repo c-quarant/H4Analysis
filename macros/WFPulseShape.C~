@@ -29,7 +29,7 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 float MeanTimeMCP(TTree* h4, std::string Selection, std::string pathToOut, std::string RunStats, std::string MCP);
 float MeanTimeShift(TTree* h4, std::string detector, std::string Selection, std::string pathToOut, std::string RunStats, std::string MCP);
 
-void AveragePulseShape(std::string FileIn, std::string detector, Float_t bound, std::string runNum, std::string MCP)
+void WFPulseShape(std::string FileIn, std::string detector, Float_t bound, std::string runNum, std::string MCP)
 {
 	Int_t Nentries, i, CH, C3=0, C0APD1=0, C0APD2=0, hodoCfg;
 	Float_t X[2], Y[2], Ampl[6];
@@ -76,8 +76,8 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	std::string AmpMean_str;
 	std::string AmpSigma_str;
 
-	TProfile2D* p2D_amp_vs_time = new TProfile2D("p2D_amp_vs_time", "", 300, -10, 40, 300, -0.5, 1.5, 0., 10000.);
-	TH2F* h2_amp_vs_time = new TH2F("h2_amp_vs_time", "", 300, -10, 40, 300, -0.5, 1.5);
+	TProfile2D* p2D_amp_vs_time = new TProfile2D("p2D_amp_vs_time", "", 2048, -204.8, 204.8 , 300, -0.5, 1.5, 0., 10000.);
+	TH2F* h2_amp_vs_time = new TH2F("h2_amp_vs_time", "", 2048, -204.8, 204.8, 300, -0.5, 1.5);
 
 	std::string Selection = "fabs(X[" + std::to_string(plane) + "]-(" + std::to_string(XMax) + "))<" + std::to_string(range) + " && fabs(Y[" + std::to_string(plane) + "]-(" + std::to_string(YMax) + "))<" + std::to_string(range) + " && amp_max["+MCP+"]>100";	
 
@@ -102,12 +102,12 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	TObjArray aSlices;
 	h2_amp_vs_time->FitSlicesY(0, 0, -1, 0, "QNR", &aSlices);
 	
-	TProfile *waveForm = new TProfile(("XTAL_"+detector+"_"+RunStats+"_prof_").c_str(), "", 300, -10, 40);
+	TProfile *waveForm = new TProfile(("XTAL_"+detector+"_"+RunStats+"_prof_").c_str(), "", 2048, -204.8, 204.8);
 	waveForm = (TProfile*)aSlices[1];
 
-	p2D_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time["+MCP+"] (ns)")).c_str());
-    	h2_amp_vs_time->GetXaxis()->SetTitle((std::string("WF_time-time["+MCP+"] (ns)")).c_str());
-    	waveForm->GetXaxis()->SetTitle((std::string("WF_time-time[MCP1] (ns)")).c_str());
+	p2D_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
+    	h2_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
+    	waveForm->GetXaxis()->SetTitle("WF_time");
     	p2D_amp_vs_time->GetYaxis()->SetTitle((std::string("WF_val/amp_max[")+detector+std::string("]")).c_str());
     	h2_amp_vs_time->GetYaxis()->SetTitle((std::string("WF_val/amp_max[")+detector+std::string("]")).c_str());
     	waveForm->GetYaxis()->SetTitle((std::string("WF_val/amp_max[")+detector+std::string("]")).c_str());
@@ -119,24 +119,24 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
     	TCanvas* c1 = new TCanvas();
     	c1->cd();
     	h2_amp_vs_time->Draw("COLZ");
-    	c1 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+runNum+"_h2.png").c_str());
-    	c1 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+detector+"_h2.pdf").c_str());
+    	c1 -> SaveAs(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+runNum+"_h2.png").c_str());
+    	c1 -> SaveAs(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+detector+"_h2.pdf").c_str());
 	
     	TCanvas* c2 = new TCanvas();
     	c2->cd();
     	p2D_amp_vs_time->Draw("COLZ");
-    	c2 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+runNum+"_Amp.png").c_str(),"png");
-    	c2 -> Print(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+runNum+"_Amp.pdf").c_str(),"pdf");
+    	c2 -> Print(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+runNum+"_Amp.png").c_str(),"png");
+    	c2 -> Print(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+runNum+"_Amp.pdf").c_str(),"pdf");
 	
 	TCanvas* c0 = new TCanvas();
     	c0->cd();
 	waveForm->GetYaxis()->SetRangeUser(0, 1.05);
 	waveForm->SetName(("XTAL_"+detector+"_"+RunStats+"_prof_").c_str());
     	waveForm->Draw();
-    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+runNum+"_profile.png").c_str());
-    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/AllCuts/PS_"+detector+"_"+RunStats+"_"+runNum+"_profile.pdf").c_str());    	
+    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+runNum+"_profile.png").c_str());
+    	c0 -> SaveAs(std::string(pathToOutput+"PulseShapes/WFPulseShapes/WFPS_"+detector+"_"+RunStats+"_"+runNum+"_profile.pdf").c_str());    	
 
-    	TFile* output_Waveform = new TFile(std::string("WaveForms/"+detector+"_"+RunStats+"_Waveform.root").c_str(),"RECREATE");
+    	TFile* output_Waveform = new TFile(std::string("PulseShapes/WF_"+detector+"_"+RunStats+".root").c_str(),"RECREATE");
     	output_Waveform->cd();
 	
 	p2D_amp_vs_time->SetName("Profile2DWaveforms_");

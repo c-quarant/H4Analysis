@@ -3,8 +3,11 @@
 #include "TLine.h"
 #include "TBox.h"
 #include "TASImage.h"
+<<<<<<< HEAD
 #include "TGaxis.h"
 #include "TPaletteAxis.h"
+=======
+>>>>>>> bmarzocc/master
 #include <iostream>
 
 void FPCanvasStyle(TPad* pad, std::string left_text="", std::string right_text="", int iPosX=0, TString extraText="",

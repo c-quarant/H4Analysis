@@ -45,7 +45,8 @@ void FPCanvasStyle(TPad* pad, std::string left_text="", std::string right_text="
         TGaxis::SetMaxDigits(4);
         pad->SetTopMargin(0.07);
         pad->SetRightMargin(0.17);
-        pad->SetLeftMargin(0.15);
+        pad->SetLeftMargin(0.08);
+   	pad->SetRightMargin(0.13);
         for(auto obj : *pad->GetListOfPrimitives())
         {
             auto obj_name = TString(obj->ClassName());

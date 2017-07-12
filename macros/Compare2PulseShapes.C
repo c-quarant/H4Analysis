@@ -13,6 +13,7 @@
 #include "TGraphAsymmErrors.h"
 #include <iostream>
 #include "TGaxis.h"
+#include "TAxis.h"
 #include "TPaletteAxis.h"
 #include "stdio.h"
 #include "TProfile.h"
@@ -36,18 +37,20 @@ void Compare2PulseShapes(std::string Waveform1, std::string Waveform2)
 	TCanvas *c0 = new TCanvas("c0","c0");
 	c0->cd();
 
+	//w1->GetXaxis()->SetTitle("time (ns)");
+	//lw1->GetYaxis()->SetTitle("ADC counts");
 	w1->Draw("L");
 	w2->SetLineColor(2);
 	w2->SetMarkerColor(2);
 	w2->Draw("SAME");
 
 	TLegend* legend = new TLegend(0.60, 0.7, 0.88, 0.88);
-	legend->AddEntry(w1, "C0APD1");
-	legend->AddEntry(w2, "C0APD2");
+	legend->AddEntry(w1, "C0APD1 100 Gev Gain 50");
+	legend->AddEntry(w2, "C3 100 Gev Gain 50");
 	legend->Draw();
 	
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C0APD2_50Gev_G50.pdf"));
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C0APD2_50Gev_G50.png"));
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C3_100Gev_G50.pdf"));
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C3_100Gev_G50.png"));
 
 
 }

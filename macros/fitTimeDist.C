@@ -16,10 +16,10 @@
 #include <string>
 #include <fstream>
 
-void fitTimeDist(std::string FileIn, std::string detector, Float_t bound, std::string MCP)
+void fitTimeDist(std::string FileIn, std::string detector, Float_t bound)
 {
 	float XMax, YMax, Xshift, Yshift, AmpMean, AmpSigma;
-	std::string TimeMCP, TimeShift, AmpMean_str, AmpSigma_str; 
+	std::string TimeMCP1, TimeMCP2, AmpMean_str, AmpSigma_str; 
 	TFile *f = TFile::Open(FileIn.c_str());
 	TTree *h4 = (TTree*)f->Get("h4");
 	
@@ -30,43 +30,123 @@ void fitTimeDist(std::string FileIn, std::string detector, Float_t bound, std::s
 	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
 	std::string RunStats = Energy+"Gev_G"+Gain;
 
-	//plot detector time distribution
+	//Shift between Hodo planes
 	Xshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "X");
 	Yshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "Y");
 	
+	//Selection on distance of hitting position from the center of the detector
 	AmplitudeProfilesFit(h4, detector, pathToOutput, RunStats, bound, &XMax, &YMax);
 
-	std::string Selection = "(fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" || fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+") && (fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+" || fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+") && amp_max["+MCP+"]>100";
+	std::string PosSel = "(fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" || fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+") && (fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+" || fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+")";
 	
-	//std::string Selection = "fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" && fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+  " && amp_max["+MCP+"]>100";
+	//Selection on MCP1 time & amplitude
+	TimeMCP1 = std::to_string(MeanTimeMCP(h4, PosSel, pathToOutput+"fitTimeDist/", RunStats, "MCP1"));
+	std::string MCP1Sel = "amp_max[MCP1]>100 && fabs(time[MCP1]-("+TimeMCP1+"))<7";
 
-	//std::string Selection = "fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+" && fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+" && amp_max["+MCP+"]>100";
-
-	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"fitTimeDist/", RunStats, MCP));
-	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<7";
-
-	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	//Selection on Amplitude
+	AmplitudeHist(h4, detector, PosSel+" && "+MCP1Sel, pathToOutput, RunStats, &AmpMean, &AmpSigma);
 	AmpMean_str = std::to_string(AmpMean);
 	AmpSigma_str = std::to_string(AmpSigma);	
-	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
-	//Selection = "WF_ch == " + detector + " && " + Selection;	
+	std::string AmpSel = "fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
 	
-	cout << Selection << endl;
+	std::string tD_APD_MCP1_Sel = PosSel + " && " + MCP1Sel + " && " + AmpSel;
+	cout << tD_APD_MCP1_Sel << endl;
 
-	TH1F* tD = new TH1F("tD", "", 2000, -20, 20);
-	h4->Draw(("fit_time["+detector+"]-time["+MCP+"]>>tD").c_str(), Selection.c_str());
+	//plot and fit APD_MCP1 time distribution
+	TH1F* tD_APD_MCP1 = new TH1F("tD_APD_MCP1", "", 2000, -20, 20);
+	if(Energy == "20" && Gain!="200") tD_APD_MCP1->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain=="200") tD_APD_MCP1->SetBins(1500, -40, 40);
+	h4->Draw(("fit_time["+detector+"]-time[MCP1]>>tD_APD_MCP1").c_str(), tD_APD_MCP1_Sel.c_str());
 	
-	float Xfirst = tD->GetXaxis()->GetBinCenter(tD->GetMaximumBin())-1;
-	float Xlast = tD->GetXaxis()->GetBinCenter(tD->GetMaximumBin())+1;
+	float Xfirst = tD_APD_MCP1->GetXaxis()->GetBinCenter(tD_APD_MCP1->GetMaximumBin())-1;
+	float Xlast = tD_APD_MCP1->GetXaxis()->GetBinCenter(tD_APD_MCP1->GetMaximumBin())+1;
 
 	TCanvas* c0 = new TCanvas("c0", "c0");
-	tD->GetXaxis()->SetRangeUser(Xfirst, Xlast);
-	tD->GetXaxis()->SetTitle(("time["+detector+"]-time["+MCP+"] (ns)").c_str());
-	tD->GetYaxis()->SetTitle("events");
-	tD->Fit("gaus", "", "", Xfirst, Xlast);
-	tD->Draw();
+	tD_APD_MCP1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD_APD_MCP1->GetXaxis()->SetTitle(("time["+detector+"]-time[MCP1] (ns)").c_str());
+	tD_APD_MCP1->GetYaxis()->SetTitle("events");
+	tD_APD_MCP1->Fit("gaus", "", "", Xfirst, Xlast);
+	tD_APD_MCP1->Draw();
 	
-	/*
+	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP1_"+RunStats+".png").c_str());
+	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP1_"+RunStats+".pdf").c_str());
+	
+	
+
+	//plot and fit APD_MCP1 time distribution wo cuts
+	TH1F* tD1 = new TH1F("tD1", "", 500, -5, 10);
+	h4->Draw(("fit_time["+detector+"]-time[MCP1]>>tD1").c_str());
+	
+	TCanvas* c1 = new TCanvas("c1", "c1");
+	tD1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD1->Fit("gaus", "", "", Xfirst, Xlast);
+	tD1->Draw();
+	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-MCP1_"+RunStats+".png").c_str());
+	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-MCP1_"+RunStats+".pdf").c_str());
+
+	
+
+
+
+	//Selection on MCP2 time && amplitude
+	TimeMCP2 = std::to_string(MeanTimeMCP(h4, PosSel, pathToOutput+"fitTimeDist/", RunStats, "MCP2"));
+	std::string MCP2Sel = "amp_max[MCP2]>100 && fabs(time[MCP2]-("+TimeMCP2+"))<7";
+
+	std::string tD_APD_MCP2_Sel = PosSel + " && " + MCP2Sel + " && " + AmpSel;
+	cout << tD_APD_MCP2_Sel << endl;
+
+	//plot and fit APD_MCP2 time distribution
+	TH1F* tD_APD_MCP2 = new TH1F("tD_APD_MCP2", "", 2000, -20, 20);
+	if(Energy == "20" && Gain!="200") tD_APD_MCP2->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain=="200") tD_APD_MCP2->SetBins(1500, -40, 40);
+	h4->Draw(("fit_time["+detector+"]-time[MCP2]>>tD_APD_MCP2").c_str(), tD_APD_MCP2_Sel.c_str());
+	
+	Xfirst = tD_APD_MCP2->GetXaxis()->GetBinCenter(tD_APD_MCP2->GetMaximumBin())-1;
+	Xlast = tD_APD_MCP2->GetXaxis()->GetBinCenter(tD_APD_MCP2->GetMaximumBin())+1;
+
+	TCanvas* c2 = new TCanvas("c2", "c2");
+	tD_APD_MCP2->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD_APD_MCP2->GetXaxis()->SetTitle(("time["+detector+"]-time[MCP2] (ns)").c_str());
+	tD_APD_MCP2->GetYaxis()->SetTitle("events");
+	tD_APD_MCP2->Fit("gaus", "", "", Xfirst, Xlast);
+	tD_APD_MCP2->Draw();
+
+	c2->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP2_"+RunStats+".png").c_str());
+	c2->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP2_"+RunStats+".pdf").c_str());
+
+	
+
+
+	//Selection on both MCP time & amplitude
+	std::string tD_APD_MCP_Mean_Sel = PosSel + " && " + MCP1Sel + " && " + MCP2Sel + " && " + AmpSel;
+	cout << tD_APD_MCP_Mean_Sel << endl;
+	
+	//plot and fit APD_MCP_Mean time distribution
+	
+	TH1F* tD_APD_MCP_Mean = new TH1F("tD_APD_MCP_Mean", "", 4000, -40, 40);
+	if(Energy == "20" && Gain!="200") tD_APD_MCP_Mean->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain=="200") tD_APD_MCP_Mean->SetBins(1500, -40, 40);
+	h4->Draw(("fit_time["+detector+"]-0.5*(time[MCP1]+time[MCP2])>>tD_APD_MCP_Mean").c_str(), tD_APD_MCP_Mean_Sel.c_str());
+	
+	Xfirst = tD_APD_MCP_Mean->GetXaxis()->GetBinCenter(tD_APD_MCP_Mean->GetMaximumBin())-1;
+	Xlast = tD_APD_MCP_Mean->GetXaxis()->GetBinCenter(tD_APD_MCP_Mean->GetMaximumBin())+1;
+
+	TCanvas* c3 = new TCanvas("c3", "c3");
+	tD_APD_MCP_Mean->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD_APD_MCP_Mean->GetXaxis()->SetTitle(("time["+detector+"]-timeMean (ns)").c_str());
+	tD_APD_MCP_Mean->GetYaxis()->SetTitle("events");
+	tD_APD_MCP_Mean->Fit("gaus", "", "", Xfirst, Xlast);
+	tD_APD_MCP_Mean->Draw();
+
+	c3->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP_Mean_"+RunStats+".png").c_str());
+	c3->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP_Mean_"+RunStats+".pdf").c_str());
+
+	cout << tD_APD_MCP1->GetFunction("gaus")->GetParError(1) << endl;
+	cout << tD_APD_MCP1->GetBinContent(tD_APD_MCP1->GetMaximumBin()) << "    " << tD_APD_MCP1->GetBinError(tD_APD_MCP1->GetMaximumBin()) << endl;
+
+}
+
+/*
 	//fit with two gaussian
 	TF1 *fitFunc = new TF1("fitFunc", "[0]*exp(-((x-[1])*(x-[1]))/2*([2]*[2])) + [3]*exp(-((x-[4])*(x-[4]))/2*([5]*[5]))", Xfirst+0.6, Xlast-0.6); 
 	
@@ -110,20 +190,4 @@ void fitTimeDist(std::string FileIn, std::string detector, Float_t bound, std::s
 
 	gaus1->SetLineColor(kGreen);
 	gaus1->Draw("SAME");
-	*/
-
-	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-"+MCP+"_"+RunStats+".png").c_str());
-	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-"+MCP+"_"+RunStats+".pdf").c_str());
-	
-	TH1F* tD1 = new TH1F("tD1", "", 500, -5, 10);
-	h4->Draw(("fit_time["+detector+"]-time["+MCP+"]>>tD1").c_str());
-	
-	TCanvas* c1 = new TCanvas("c1", "c1");
-	tD1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
-	tD1->Fit("gaus", "", "", Xfirst, Xlast);
-	tD1->Draw();
-	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-"+MCP+"_"+RunStats+".png").c_str());
-	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-"+MCP+"_"+RunStats+".pdf").c_str());
-		
-}
-	
+	*/	

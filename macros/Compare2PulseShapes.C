@@ -29,7 +29,7 @@ void Compare2PulseShapes(std::string Waveform1, std::string Waveform2)
 	TFile *f1 = TFile::Open(Waveform1.c_str());
 	TFile *f2 = TFile::Open(Waveform2.c_str());
 
-	TF1 *w1 = (TF1*)f1->Get("Waveform_");
+	TF1 *w1 = (TF1*)f1->Get("XTAL_D2_E150_G50_prof_");
 	w1->SetTitle("");
 	TH1D *w2 = (TH1D*)f2->Get("Waveform_");
 	w2->SetTitle("");
@@ -44,13 +44,13 @@ void Compare2PulseShapes(std::string Waveform1, std::string Waveform2)
 	w2->SetMarkerColor(2);
 	w2->Draw("SAME");
 
-	TLegend* legend = new TLegend(0.60, 0.7, 0.88, 0.88);
-	legend->AddEntry(w1, "C0APD1 100 Gev Gain 50");
-	legend->AddEntry(w2, "C3 100 Gev Gain 50");
+	TLegend* legend = new TLegend(0.55, 0.7, 0.88, 0.88);
+	legend->AddEntry(w1, w1->GetName());
+	legend->AddEntry(w2, w2->GetName());
 	legend->Draw();
 	
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C3_100Gev_G50.pdf"));
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_C0APD1_C3_100Gev_G50.png"));
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_D3_C3_150Gev_G50.pdf"));
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/PulseShapes/ComparePulseShape/Comp_D3_C3_150Gev_G50.png"));
 
 
 }

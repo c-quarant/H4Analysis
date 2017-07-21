@@ -52,6 +52,8 @@ void timeDist(std::string FileIn, std::string detector, Float_t bound, std::stri
 	
 	cout << Selection << endl;
 
+	Selection = "amp_max["+MCP+"]>100 && fabs(time["+MCP+"]-("+TimeMCP+"))<7";
+
 	TH1F* tD = new TH1F("tD", "", 500, -5, 5);
 	h4->Draw(("time["+detector+"]-time["+MCP+"]>>tD").c_str(), Selection.c_str());
 	
@@ -60,16 +62,20 @@ void timeDist(std::string FileIn, std::string detector, Float_t bound, std::stri
 
 	TCanvas* c0 = new TCanvas("c0", "c0");
 	tD->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD->GetXaxis()->SetTitle(("time["+detector+"]-time["+MCP+"] (ns)").c_str());
+	tD->GetYaxis()->SetTitle("events");
 	tD->Fit("gaus", "", "", Xfirst, Xlast);
 	tD->Draw();
-	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/Time_"+detector+"-"+MCP+"_"+RunStats+".png").c_str());
-	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/Time_"+detector+"-"+MCP+"_"+RunStats+".pdf").c_str());
+	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/TimeRaw_"+detector+"-"+MCP+"_"+RunStats+".png").c_str());
+	c0->SaveAs((pathToOutput+"time_dist/FinalTimeDistribution/TimeRaw_"+detector+"-"+MCP+"_"+RunStats+".pdf").c_str());
 
 	TH1F* tD1 = new TH1F("tD1", "", 500, -5, 5);
 	h4->Draw(("time["+detector+"]-time["+MCP+"]>>tD1").c_str());
 	
 	TCanvas* c1 = new TCanvas("c1", "c1");
 	tD1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD1->GetXaxis()->SetTitle(("time["+detector+"]-time["+MCP+"] (ns)").c_str());
+	tD1->GetYaxis()->SetTitle("events");
 	tD1->Fit("gaus", "", "", Xfirst, Xlast);
 	tD1->Draw();
 	c1->SaveAs((pathToOutput+"time_dist/RawTimeDistribution/TimeNoCut_"+detector+"-"+MCP+"_"+RunStats+".png").c_str());

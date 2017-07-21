@@ -82,16 +82,18 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	std::string Selection = "fabs(X[" + std::to_string(plane) + "]-(" + std::to_string(XMax) + "))<" + std::to_string(range) + " && fabs(Y[" + std::to_string(plane) + "]-(" + std::to_string(YMax) + "))<" + std::to_string(range) + " && amp_max["+MCP+"]>100";	
 
 	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"PulseShapes/", RunStats, MCP));
-	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<7";
+	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<1";
+
+	Selection = Selection + " && fabs(time["+detector+"]-time["+MCP+"])<7";
 
 	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
 	AmpMean_str = std::to_string(AmpMean);
 	AmpSigma_str = std::to_string(AmpSigma);	
-	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
-	
+	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;
 	TimeShift = std::to_string(MeanTimeShift(h4, detector, Selection, pathToOutput+"PulseShapes/", RunStats, MCP));
 	Selection = "WF_ch == " + detector + " && " + Selection;	
 	
+
 	cout << Selection << endl;
         h4->Draw(("amp_max["+detector+"]:WF_val/amp_max["+detector+"]:WF_time-time["+MCP+"]-("+TimeShift+")>>p2D_amp_vs_time").c_str(),Selection.c_str());
 	cout << "Draw 1" << endl;
@@ -139,12 +141,18 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
     	TFile* output_Waveform = new TFile(std::string("WaveForms/"+detector+"_"+RunStats+"_Waveform.root").c_str(),"RECREATE");
     	output_Waveform->cd();
 	
+	TTree *TRunStats = new TTree("TRunStats", "TRunStats");
+
+	TBranch *RUN_NUM = new TBranch(TRunStats, "RUNSTATS", &RunStats, "RUNSTATS/C");
+
 	p2D_amp_vs_time->SetName("Profile2DWaveforms_");
 	h2_amp_vs_time->SetName("H2Waveforms_");
 
 	p2D_amp_vs_time->Write();
     	h2_amp_vs_time->Write();
     	waveForm->Write();
+	TRunStats->Write();
+
     	output_Waveform->Close();
 	cout << waveForm->GetName() << endl; 
 }
@@ -152,7 +160,7 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 //returns the mean time shift between detector and MCP selected
 float MeanTimeShift(TTree* h4, std::string detector, std::string Selection, std::string pathToOut, std::string RunStats, std::string MCP)
 {
-	TH1F* raw_time_dist = new TH1F("raw_time_dist", "", 200, -3, 3);
+	TH1F* raw_time_dist = new TH1F("raw_time_dist", "", 400, -6, 6);
 
 	h4->Draw((std::string("time["+detector+"]-time["+MCP+"]>>raw_time_dist")).c_str(), Selection.c_str());
 
@@ -161,7 +169,7 @@ float MeanTimeShift(TTree* h4, std::string detector, std::string Selection, std:
 
 	TCanvas* c0 = new TCanvas();
     	c0->cd();
-	raw_time_dist->Fit("gaus", "", "", -3, 3);
+	raw_time_dist->Fit("gaus", "", "", -6, 6);
     	raw_time_dist->Draw();
     	c0 -> SaveAs(std::string(pathToOut+"RawTimeDistribution/RawTimeDist"+MCP+"_"+detector+"_"+RunStats+".png").c_str());
     	c0 -> SaveAs(std::string(pathToOut+"RawTimeDistribution/RawTimeDist"+MCP+"_"+detector+"_"+RunStats+".pdf").c_str());

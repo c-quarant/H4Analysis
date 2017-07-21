@@ -1,0 +1,64 @@
+#include "TFile.h"
+#include "TStyle.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+#include "TTree.h" 
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TColor.h"
+#include "TLatex.h"
+#include "TGraphAsymmErrors.h"
+#include <iostream>
+#include "TGaxis.h"
+#include "TPaletteAxis.h"
+#include "MyLib.h"
+#include <string>
+#include <fstream>
+
+void plotChi2(std::string FileIn, std::string detector, Float_t bound, std::string MCP)
+{
+	float XMax, YMax, Xshift, Yshift, AmpMean, AmpSigma;
+	std::string TimeMCP, TimeShift, AmpMean_str, AmpSigma_str; 
+	TFile *f = TFile::Open(FileIn.c_str());
+	TTree *h4 = (TTree*)f->Get("h4");
+	
+	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/";
+	
+	h4->GetEntry(0);
+	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
+	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
+	std::string RunStats = Energy+"Gev_G"+Gain;
+
+	//plot detector time distribution
+	Xshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "X");
+	Yshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "Y");
+	
+	AmplitudeProfilesFit(h4, detector, pathToOutput, RunStats, bound, &XMax, &YMax);
+
+	std::string Selection = "(fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" || fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+") && (fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+" || fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+") && amp_max["+MCP+"]>100";
+	
+	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"fitTimeDist/", RunStats, MCP));
+	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<7";
+
+	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	AmpMean_str = std::to_string(AmpMean);
+	AmpSigma_str = std::to_string(AmpSigma);	
+	Selection = Selection + " && fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;
+
+	TH1D *hChi2 = new TH1D("hChi2", "", 50, 0, 4);
+	//Selection = "";
+	h4->Draw(("fit_chi2["+detector+"]/2>>hChi2").c_str(), Selection.c_str());
+
+	TCanvas* c0 = new TCanvas("c0", "c0");
+	hChi2->GetXaxis()->SetTitle("reduced #chi2");
+	hChi2->GetYaxis()->SetTitle("events");
+	
+	hChi2->Draw();
+	
+	c0->SaveAs((pathToOutput+"fitTimeDist/TemplateChi2/Chi2_"+detector+"_"+RunStats+".png").c_str());
+	c0->SaveAs((pathToOutput+"fitTimeDist/TemplateChi2/Chi2_"+detector+"_"+RunStats+".pdf").c_str());
+		
+}
+
+

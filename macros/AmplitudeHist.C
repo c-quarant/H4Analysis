@@ -5,7 +5,7 @@ void AmplitudeHist(TTree *h4, std::string detector, std::string Selection, std::
 	h4->Draw(("amp_max["+detector+"]>>HAmp").c_str(), Selection.c_str());
 	HAmp->GetXaxis()->SetRange((int)(HAmp->GetMaximumBin()*0.80), (int)(HAmp->GetMaximumBin()*1.10));
 
-	HAmp->Fit("gaus", "N");
+	HAmp->Fit("gaus");
 	TCanvas* c1 = new TCanvas("c1", "c1");
 	HAmp->GetXaxis()->SetRange((int)(HAmp->GetMaximumBin()*0.50), (int)(HAmp->GetMaximumBin()*1.50));
 	HAmp->Draw();

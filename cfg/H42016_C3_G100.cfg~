@@ -1,7 +1,7 @@
 #---MAIN
 <h4reco>
 #nome output
-outNameSuffix /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/ntuples/H42016_C3_
+outNameSuffix /afs/cern.ch/work/c/cquarant/testbeamH4MyRepo/H4Analysis/ntuples/H42016_C3_fitTime_
 #outNameSuffix /tmp/bmarzocc/h42014_50GeV_scan5_
 #outNameSuffix /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/TimingTB_BTF_Jun2016/ntuples/v1/h42014_50GeV_scan5_
 path2data /eos/cms/store/group/dpg_ecal/comm_ecal/upgrade/testbeam/ECALTB_H4_Jul2016/raw/DataTree/
@@ -19,13 +19,16 @@ treeName   info
 trackedVariable h4reco.run
 mappedVars  CHGain Energy MBVolt
 
-originValues 5784 5785 5786
+#--number of events
+#------------ 100k  11k  50k 103k  52k  84k
 
-CHGain        200  100  050\
+originValues 5778 5785 5802 5895 5880 5890  
 
-Energy        020  020  020\
+CHGain        100  100  100  100  100  100\
 
-MBVolt        384  373  355\
+Energy        100   20   50  150  200  200\
+
+MBVolt        355  355  355  355  355  355\
        
 </AdditionalInfo>
 
@@ -81,23 +84,35 @@ CFD 0.5 5
 LED50 50 0 3
 LED100 100 0 3
 LED150 150 0 3
+<templateFit>  
+file templateProf/WF_C3_E100_G100.root XTAL_C3_E100_G100_prof
+fitWin 0. 75 175
+</templateFit>
 </C3>
 
-<MCP1= C3>
+<MCP1>
 digiGroup 2
 digiChannel 0
 polarity -1
+subtractChannel Void
+baselineWin 10 30
+baselineInt 30 50
+signalWin 50 500 7
+signalInt 10 10
+CFD 0.5 5
+LED50 50 0 3
+LED100 100 0 3
+LED150 150 0 3
 </MCP1>
 
-<MCP2= C3>
+<MCP2= MCP1>
 digiGroup 2
 digiChannel 1
-polarity -1
 </MCP2>
 
 <Void>
-digiGroup 0
-digiChannel 0
+digiGroup 2
+digiChannel 5
 polarity -1
 baselineWin 1 150
 baselineInt 30 50
@@ -108,3 +123,5 @@ LED50 50 0 3
 LED100 100 0 3
 LED150 150 0 3
 </Void>
+
+

@@ -16,16 +16,19 @@ void FitRes(std::string FileName, std::string detector, int NumberGains){
 	TCanvas* c0 = new TCanvas("c0", "c0");
 	c0->cd();
 	
-	TF1 *fitFunc = new TF1("fitFunc", "TMath::Sqrt([0]*[0]/(x*x) + [1]*[1])", 15, 1000);
+	TF1 *fitFunc = new TF1("fitFunc", "TMath::Sqrt([0]*[0]/(x*x) + [1]*[1] )", 15, 1000);
 
-	fitFunc->SetParLimits(0, 0, 10000);
-	fitFunc->SetParLimits(1, 0, 1000); 
+	fitFunc->SetParLimits(0, 10, 10000);
+	fitFunc->SetParLimits(1, 10, 100);
+	//fitFunc->SetParLimits(2, 0, 2000);  
 
-	fitFunc->SetParameter(0, 100);
-	fitFunc->SetParameter(1, 40);
+	fitFunc->SetParameter(0, 5000);
+	fitFunc->SetParameter(1, 33);
+	//fitFunc->SetParameter(2, 0);
 
 	fitFunc->SetParName(0, "Noise");
 	fitFunc->SetParName(1, "const");
+	//fitFunc->SetParName(2, "~stochastic");
 
 	if(NumberGains==1)
 	{
@@ -45,7 +48,7 @@ void FitRes(std::string FileName, std::string detector, int NumberGains){
 	{
 		TGraphErrors* g100 = new TGraphErrors(FileName.c_str(), "%*lg %*lg %*lg %*lg %lg %lg %lg %lg");
 		g100->SetTitle("");
-
+		
 		g100->GetXaxis()->SetTitle("A/#sigma(Noise)");
 		g100->GetYaxis()->SetTitle("#sigma(APD-MCP) (ps)");
 		g100->SetLineColor(kBlue);

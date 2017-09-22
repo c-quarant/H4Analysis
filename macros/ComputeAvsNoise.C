@@ -60,9 +60,9 @@ int ComputeAvsNoise(std::string RunNtuple, std::string NoiseNtuple, std::string 
 	Selection = "";
 	AmplitudeHistPar(h4Noise, detector, Selection, pathToOutput, "Noise_"+Gain, &NoisePar);
 
-	cout << AmpPar.Mean << " +- " << AmpPar.MeanErr << endl;
-	cout << NoisePar.Sigma << " +- " << NoisePar.SigmaErr << endl;
-	cout << AmpPar.Mean/NoisePar.Sigma << " +- " << TMath::Sqrt(pow(AmpPar.MeanErr/AmpPar.Mean, 2) + pow(NoisePar.SigmaErr/NoisePar.Sigma, 2))*AmpPar.Mean/NoisePar.Sigma << endl;
+	cout << "Signal Amplitude = " << AmpPar.Mean << " +- " << AmpPar.MeanErr << endl;
+	cout << "Noise RMS = " << NoisePar.Sigma << " +- " << NoisePar.SigmaErr << endl;
+	cout << "A/Noise = " << AmpPar.Mean/NoisePar.Sigma << " +- " << TMath::Sqrt(pow(AmpPar.MeanErr/AmpPar.Mean, 2) + pow(NoisePar.SigmaErr/NoisePar.Sigma, 2))*AmpPar.Mean/NoisePar.Sigma << endl;
 	return 0;
 }
 	

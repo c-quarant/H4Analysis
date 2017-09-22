@@ -84,6 +84,8 @@ void PulseShapes(TTree* h4, std::string detector, int plane, float XMax, float Y
 	TimeMCP = std::to_string(MeanTimeMCP(h4, Selection, pathToOutput+"PulseShapes/", RunStats, MCP));
 	Selection = Selection + " && fabs(time["+MCP+"]-("+TimeMCP+"))<1";
 
+	Selection = Selection + " && fabs(time["+detector+"]-time["+MCP+"])<7";
+
 	AmplitudeHist(h4, detector, Selection, pathToOutput, RunStats, &AmpMean, &AmpSigma);
 	AmpMean_str = std::to_string(AmpMean);
 	AmpSigma_str = std::to_string(AmpSigma);	

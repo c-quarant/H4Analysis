@@ -1,0 +1,35 @@
+#include "fitTimeDist.C"
+#include "Riostream.h"
+
+void TimeResScript(std::string NtupleList)
+{
+	ifstream in;
+	in.open(NtupleList);
+	int nline=0;
+	GaussPar TimePar;
+	
+	std::string path = (std::string)gSystem->UnixPathName(__FILE__);
+	size_t found = path.find("macros/./TimeResScript.C");
+	path.replace(found, std::string("macros/./TimeResScript.C").length(), "ntuples/");
+	std::string ntuple="";
+	/*
+	TTree *tD = new TTree("tD", "Parameters of time distribution (fit)");
+
+	tD->branch("time_mean", &TimePar.Mean, "time_mean/F");
+	tD->branch("time_mean_error", &TimePar.MeanErr, "time_mean_error/F");
+	tD->branch("time_sigma", &TimePar.Sigma, "time_sigma/F");
+	tD->branch("time_sigma_error", &TimePar.SigmaErr, "time_sigma_error/F");
+	*/
+
+	while(ntuple!="END"){
+		in >> ntuple;
+		cout << nline << "   " << path+ntuple << endl;
+		if(ntuple.find("C3")!=std::string::npos)fitTimeDist((path+ntuple).c_str(), "C3", 3);
+		else{
+			fitTimeDist((path+ntuple).c_str(), "C0APD1", 3);
+			fitTimeDist((path+ntuple).c_str(), "C0APD2", 3);
+		}
+	}
+
+	in.close();
+}

@@ -215,7 +215,26 @@
 ./WFPulseShape_C.so: setStyle.C
 ./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/TProfile.h
 ./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/TProfile2D.h
-./WFPulseShape_C.so: AmplitudeHist.C AmplitudeProfilesFit.C
+./WFPulseShape_C.so: MyLib.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/TMath.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/TError.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/limits
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/WrappedTF1.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/IParamFunction.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/IFunction.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/IFunctionfwd.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/IParamFunctionfwd.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/Util.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/sstream
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/bits/sstream.tcc
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/cassert
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/RootFinderAlgorithms.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/GSLRootFinder.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/GSLFunctionAdapter.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/IRootFinderMethod.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/Error.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/Math/GSLRootFinderDeriv.h
+./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/app/releases/ROOT/6.05.02/x86_64-slc6-gcc49-opt/root/include/TGraphErrors.h
 ./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/fstream
 ./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/bits/codecvt.h
 ./WFPulseShape_C.so: /afs/cern.ch/sw/lcg/contrib/gcc/4.9.3/x86_64-slc6/include/c++/4.9.3/cstdio

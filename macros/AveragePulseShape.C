@@ -19,8 +19,7 @@
 #include "stdio.h"
 #include "TProfile.h"
 #include "TProfile2D.h"
-#include "AmplitudeHist.C"
-#include "AmplitudeProfilesFit.C"
+#include "Mylib.h"
 #include <string>
 #include <fstream>
 #include <math.h>

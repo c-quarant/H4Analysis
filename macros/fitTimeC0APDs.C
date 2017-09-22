@@ -1,0 +1,116 @@
+#include "TFile.h"
+#include "TStyle.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+#include "TTree.h" 
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TColor.h"
+#include "TLatex.h"
+#include "TGraphAsymmErrors.h"
+#include <iostream>
+#include "TGaxis.h"
+#include "TPaletteAxis.h"
+#include "MyLib.h"
+#include <string>
+#include <fstream>
+
+GaussPar fitTimeC0APDs(std::string FileIn, float* ANoiseRatio, float* ANoiseRatioErr, Float_t bound)
+{
+	GaussPar TimePar, AeNoiseC0APD1, AeNoiseC0APD2;
+	float XCentre, YCentre, Xshift, Yshift, AmpMean, AmpSigma;
+	std::string TimeMCP1, TimeMCP2, AmpMean_str, AmpSigma_str; 
+	TFile *f = TFile::Open(FileIn.c_str());
+	TTree *h4 = (TTree*)f->Get("h4");
+	
+	std::string pathToOutput = "/afs/cern.ch/user/c/cquarant/www/";
+	
+	h4->GetEntry(0);
+	std::string Gain = std::to_string((int)h4->GetLeaf("CHGain")->GetValue(0));
+	std::string Energy = std::to_string((int)h4->GetLeaf("Energy")->GetValue(0));
+	std::string RunStats = Energy+"Gev_G"+Gain;
+
+	//Shift between Hodo planes
+	Xshift = HodoPlaneShift(h4, "C0APD1", pathToOutput, RunStats, "X");
+	Yshift = HodoPlaneShift(h4, "C0APD1", pathToOutput, RunStats, "Y");
+	
+	//Selection on distance of hitting position from the center of the detector 1
+	std::string AmplMCPSel = "amp_max[MCP1]>200 && amp_max[MCP1]<2000 && amp_max[MCP2]>200 && amp_max[MCP2]<2000";
+	AmplitudeProfilesFit(h4, "C0APD1", AmplMCPSel, pathToOutput, RunStats, bound, &XCentre, &YCentre, Xshift, Yshift);
+
+	std::string XCentre_str = std::to_string(XCentre);
+	std::string YCentre_str = std::to_string(YCentre);
+	std::string bound_str = std::to_string(bound);
+	std::string Xshift_str = std::to_string(Xshift);
+	std::string Yshift_str = std::to_string(Yshift);
+
+
+	std::string PosSel1 = "(fabs(X[0]-("+XCentre_str+"))<"+bound_str+" || fabs(X[1]-("+XCentre_str+")-("+Xshift_str+"))<"+bound_str+") && (fabs(Y[0]-("+YCentre_str+"))<"+bound_str+" || fabs(Y[1]-("+YCentre_str+")-("+Yshift_str+"))<"+bound_str+") && (fabs(X[0])<5 || fabs(X[1]-"+Xshift_str+")<5) && (fabs(Y[0])<5 || fabs(Y[1]-"+Yshift_str+")<5)";
+	
+	//Selection on Amplitude detector 1
+	AmplitudeHist(h4, "C0APD1", PosSel1+"&&"+AmplMCPSel, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	AmpMean_str = std::to_string(AmpMean);
+	AmpSigma_str = std::to_string(AmpSigma);	
+	std::string AmpSel1 = "fabs(fit_ampl[C0APD1]-("+AmpMean_str+"))<1*"+AmpSigma_str;
+
+	ComputeAvsNoise(h4, "C0APD1", bound, "MCP1", Xshift, Yshift, XCentre, YCentre, &AeNoiseC0APD1, ANoiseRatio, ANoiseRatioErr);	
+
+	//Selection on distance of hitting position from the center of the detector 2
+	AmplitudeProfilesFit(h4, "C0APD2", AmplMCPSel, pathToOutput, RunStats, bound, &XCentre, &YCentre, Xshift, Yshift);
+
+	XCentre_str = std::to_string(XCentre);
+	YCentre_str = std::to_string(YCentre);
+	
+	std::string PosSel2 = "(fabs(X[0]-("+XCentre_str+"))<"+bound_str+" || fabs(X[1]-("+XCentre_str+")-("+Xshift_str+"))<"+bound_str+") && (fabs(Y[0]-("+YCentre_str+"))<"+bound_str+" || fabs(Y[1]-("+YCentre_str+")-("+Yshift_str+"))<"+bound_str+") && (fabs(X[0])<5 || fabs(X[1]-"+Xshift_str+")<5) && (fabs(Y[0])<5 || fabs(Y[1]-"+Yshift_str+")<5)";
+	
+	//Selection on Amplitude detector 2
+	AmplitudeHist(h4, "C0APD2", PosSel2+"&&"+AmplMCPSel, pathToOutput, RunStats, &AmpMean, &AmpSigma);
+	AmpMean_str = std::to_string(AmpMean);
+	AmpSigma_str = std::to_string(AmpSigma);	
+	std::string AmpSel2 = "fabs(fit_ampl[C0APD2]-("+AmpMean_str+"))<1*"+AmpSigma_str;	
+	
+	//plot and fit APD1_APD2 time distribution
+	std::string tD_APD1_APD2_Sel = PosSel1 + " && " + AmpSel1 + " && " + PosSel2 + " && " + AmpSel2 + " && " + AmplMCPSel;
+
+	TH1F* tD_APD1_APD2 = new TH1F("tD_APD1_APD2", "", 2000, -20, 20);
+	if(Energy == "20" && Gain!="200") tD_APD1_APD2->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain=="200") tD_APD1_APD2->SetBins(1500, -40, 40);
+	h4->Draw("fit_time[C0APD1]-time[C0APD2]>>tD_APD1_APD2", tD_APD1_APD2_Sel.c_str());
+	
+	float Xfirst = tD_APD1_APD2->GetXaxis()->GetBinCenter(tD_APD1_APD2->GetMaximumBin())-1;
+	float Xlast = tD_APD1_APD2->GetXaxis()->GetBinCenter(tD_APD1_APD2->GetMaximumBin())+1;
+
+	TCanvas* c0 = new TCanvas("c0", "c0");
+	tD_APD1_APD2->GetXaxis()->SetRangeUser(Xfirst, Xlast);
+	tD_APD1_APD2->GetXaxis()->SetTitle("time[C0APD1]-time[C0APD2] (ns)");
+	tD_APD1_APD2->GetYaxis()->SetTitle("events");
+	tD_APD1_APD2->Fit("gaus", "", "", Xfirst, Xlast);
+	tD_APD1_APD2->Draw();
+
+	TimePar.Mean = tD_APD1_APD2->GetFunction("gaus")->GetParameter(1);
+	TimePar.MeanErr = tD_APD1_APD2->GetFunction("gaus")->GetParError(1);
+	TimePar.Sigma = tD_APD1_APD2->GetFunction("gaus")->GetParameter(2);
+	TimePar.SigmaErr = tD_APD1_APD2->GetFunction("gaus")->GetParError(2);
+	
+	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+"C0APD1"+"-"+"C0APD2"+"_"+RunStats+".png").c_str());
+	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+"C0APD1"+"-"+"C0APD2"+"_"+RunStats+".pdf").c_str());
+	
+	ComputeAvsNoise(h4, "C0APD2", bound, "MCP1", Xshift, Yshift, XCentre, YCentre, &AeNoiseC0APD2, ANoiseRatio, ANoiseRatioErr);
+	
+	float A1 = AeNoiseC0APD1.Mean, A2 = AeNoiseC0APD2.Mean;
+	float A1err = AeNoiseC0APD1.MeanErr, A2err = AeNoiseC0APD2.MeanErr;
+	float S1 = AeNoiseC0APD1.Sigma, S2 = AeNoiseC0APD2.Sigma;
+	float S1err = AeNoiseC0APD1.SigmaErr, S2err = AeNoiseC0APD2.SigmaErr;  
+
+	float tempA = A1*A2/TMath::Sqrt(A1*A1 + A2*A2);
+	float tempAErr = TMath::Sqrt( pow( A2/TMath::Sqrt(A1*A1 + A2*A2)-0.5*A1*A2/pow(A1*A1+A2*A2, 1.5),2)*pow(A1err,2) + pow( A1/TMath::Sqrt(A1*A1 + A2*A2)-0.5*A1*A2/pow(A1*A1+A2*A2, 1.5),2)*pow(A2err,2));
+	float tempSigma = TMath::Sqrt(S1*S1 + S2*S2);
+	float tempSigmaErr = TMath::Sqrt( pow(S1*S1err/TMath::Sqrt(S1*S1+S2*S2),2) + pow(S2*S2err/TMath::Sqrt(S1*S1+S2*S2),2));
+
+	*ANoiseRatio = tempA/tempSigma;
+	*ANoiseRatioErr = 1;// *ANoiseRatio*(tempA/tempAErr + tempSigma/tempSigmaErr);
+	return TimePar;
+}
+
+

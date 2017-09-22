@@ -33,93 +33,211 @@ void fitTimeDist(std::string FileIn, std::string detector, Float_t bound)
 	//Shift between Hodo planes
 	Xshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "X");
 	Yshift = HodoPlaneShift(h4, detector, pathToOutput, RunStats, "Y");
-	
-	//Selection on distance of hitting position from the center of the detector
-	AmplitudeProfilesFit(h4, detector, pathToOutput, RunStats, bound, &XMax, &YMax);
 
-	std::string PosSel = "(fabs(X[0]-("+std::to_string(XMax)+"))<"+std::to_string(bound)+" || fabs(X[1]-("+std::to_string(XMax)+")-("+std::to_string(Xshift)+"))<"+std::to_string(bound)+") && (fabs(Y[0]-("+std::to_string(YMax)+"))<"+std::to_string(bound)+" || fabs(Y[1]-("+std::to_string(YMax)+")-("+std::to_string(Yshift)+"))<"+std::to_string(bound)+")";
-	
+	//Selection on distance of hitting position from the center of the detector
+	std::string AmplMCPSel = "amp_max[MCP1]>200 && amp_max[MCP1]<900 && amp_max[MCP2]>200 && amp_max[MCP2]<900";
+	AmplitudeProfilesFit(h4, detector, AmplMCPSel, pathToOutput, RunStats, bound, &XMax, &YMax, Xshift, Yshift);
+
+	std::string XMax_str = std::to_string(XMax);
+	std::string YMax_str = std::to_string(YMax);
+	std::string bound_str = std::to_string(bound);
+	std::string Xshift_str = std::to_string(Xshift);
+	std::string Yshift_str = std::to_string(Yshift);
+
+	std::string PosSel = "(fabs(X[0]-("+XMax_str+"))<"+bound_str+" || fabs(X[1]-("+XMax_str+")-("+Xshift_str+"))<"+bound_str+") && (fabs(Y[0]-("+YMax_str+"))<"+bound_str+" || fabs(Y[1]-("+YMax_str+")-("+Yshift_str+"))<"+bound_str+") && (fabs(X[0])<5 || fabs(X[1]-"+Xshift_str+")<5) && (fabs(Y[0])<5 || fabs(Y[1]-"+Yshift_str+")<5)";
+
 	//Selection on MCP1 time & amplitude
 	TimeMCP1 = std::to_string(MeanTimeMCP(h4, PosSel, pathToOutput+"fitTimeDist/", RunStats, "MCP1"));
-	std::string MCP1Sel = "amp_max[MCP1]>100 && fabs(time[MCP1]-("+TimeMCP1+"))<7";
+	std::string MCP1Sel = "amp_max[MCP1]>200 && amp_max[MCP1]<900 && fabs(time[MCP1]-("+TimeMCP1+"))<7";
+
+	//Drawing Amplitude Maps
+	AmplitudeMaps(h4, detector, AmplMCPSel, Xshift_str, Yshift_str, XMax, YMax, bound, RunStats);	
 
 	//Selection on Amplitude
 	AmplitudeHist(h4, detector, PosSel+" && "+MCP1Sel, pathToOutput, RunStats, &AmpMean, &AmpSigma);
 	AmpMean_str = std::to_string(AmpMean);
 	AmpSigma_str = std::to_string(AmpSigma);	
-	std::string AmpSel = "fabs(amp_max["+detector+"]-("+AmpMean_str+"))<5*"+AmpSigma_str;	
+	std::string AmpSel = "fabs(amp_max["+detector+"]-("+AmpMean_str+"))<1*"+AmpSigma_str;	
 	
 	std::string tD_APD_MCP1_Sel = PosSel + " && " + MCP1Sel + " && " + AmpSel;
-	cout << tD_APD_MCP1_Sel << endl;
+	//cout << tD_APD_MCP1_Sel << endl;
 
-	//plot and fit APD_MCP1 time distribution
+	//Template fit Chi2 distribution
+	PlotTemplateChi2(h4, detector, "MCP1", tD_APD_MCP1_Sel, RunStats);
+
+	//define APD_MCP1 time distribution
 	TH1F* tD_APD_MCP1 = new TH1F("tD_APD_MCP1", "", 2000, -20, 20);
-	if(Energy == "20" && Gain!="200") tD_APD_MCP1->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain!="200") tD_APD_MCP1->SetBins(1000, -40, 40);
 	if(Energy == "20" && Gain=="200") tD_APD_MCP1->SetBins(1500, -40, 40);
 	h4->Draw(("fit_time["+detector+"]-time[MCP1]>>tD_APD_MCP1").c_str(), tD_APD_MCP1_Sel.c_str());
 	
 	float Xfirst = tD_APD_MCP1->GetXaxis()->GetBinCenter(tD_APD_MCP1->GetMaximumBin())-1;
 	float Xlast = tD_APD_MCP1->GetXaxis()->GetBinCenter(tD_APD_MCP1->GetMaximumBin())+1;
 
+	float TMax = tD_APD_MCP1->GetBinCenter(tD_APD_MCP1->GetMaximumBin());
+	float TMaxValue = tD_APD_MCP1->GetMaximum();
+	
+	//define fit function
+	TF1* fitFunc = new TF1("fitFunc", "[0]*TMath::Exp(-(x-[1])*(x-[1])/(2*[2]*[2])) + [3]*TMath::Exp(-(x-[4])*(x-[4])/(2*[5]*[5]))", Xfirst, Xlast);
+
+	fitFunc->SetParLimits(0, TMaxValue*0.75, TMaxValue*1.39);
+	fitFunc->SetParLimits(1, TMax*0.95, TMax*1.05);
+	fitFunc->SetParLimits(2, 0, 0.15);
+	fitFunc->SetParLimits(3, TMaxValue*0.02, TMaxValue*0.4);
+	fitFunc->SetParLimits(4, TMax*0.96, TMax*0.99);
+	fitFunc->SetParLimits(5, 0.025, 0.35);
+
+	fitFunc->SetParameter(0, TMaxValue);
+	fitFunc->SetParameter(1, TMax);
+	fitFunc->SetParameter(2, 0.04);
+	fitFunc->SetParameter(3, TMaxValue/10);
+	fitFunc->SetParameter(4, TMax*0.979);
+	fitFunc->SetParameter(5, 0.05);	
+
+	fitFunc->SetParNames("A0", "Mean0", "Sigma0", "A1", "Mean1", "Sigma1");
+
+
+	//plot and fit APD_MCP1 time distribution
 	TCanvas* c0 = new TCanvas("c0", "c0");
 	tD_APD_MCP1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
 	tD_APD_MCP1->GetXaxis()->SetTitle(("time["+detector+"]-time[MCP1] (ns)").c_str());
 	tD_APD_MCP1->GetYaxis()->SetTitle("events");
 	tD_APD_MCP1->Fit("gaus", "", "", Xfirst, Xlast);
+	//tD_APD_MCP1->Fit("fitFunc", "", "", Xfirst, Xlast);	
 	tD_APD_MCP1->Draw();
 	
+	//draw components
+	TF1* gaus0 = new TF1("gaus0", "gaus", Xfirst, Xlast-0.6);
+	TF1* gaus1 = new TF1("gaus1", "gaus", Xfirst, Xlast);
+
+	gaus0->SetParameter(0, fitFunc->GetParameter("A0"));
+	gaus0->SetParameter(1, fitFunc->GetParameter("Mean0"));
+	gaus0->SetParameter(2, fitFunc->GetParameter("Sigma0"));
+
+	gaus1->SetParameter(0, fitFunc->GetParameter("A1"));
+	gaus1->SetParameter(1, fitFunc->GetParameter("Mean1"));
+	gaus1->SetParameter(2, fitFunc->GetParameter("Sigma1"));
+
+	gaus0->SetLineColor(kBlue);
+	//gaus0->Draw("SAME");
+
+	gaus1->SetLineColor(kGreen);
+	//gaus1->Draw("SAME");
+	/*
+	std::string C = std::to_string(fitFunc->GetMaximum()/2);
+	TF1* g = new TF1("g", ("fitFunc-"+C).c_str(), Xfirst, Xlast);  
+
+	float Xleft = NumericalRootFinder(g, fitFunc->GetMaximumX()-0.5, fitFunc->GetMaximumX());
+	float Xright = NumericalRootFinder(g, fitFunc->GetMaximumX(), fitFunc->GetMaximumX()+0.5);
+
+	cout << "\nXleft = " << Xleft << endl;
+	cout << "Xright = " << Xright << endl;
+	cout << "Resolution i.e (FWHM/2) = " << 0.5*(Xright-Xleft) << endl << endl;
+	*/
 	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP1_"+RunStats+".png").c_str());
 	c0->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP1_"+RunStats+".pdf").c_str());
-	
-	
 
-	//plot and fit APD_MCP1 time distribution wo cuts
-	TH1F* tD1 = new TH1F("tD1", "", 500, -5, 10);
-	h4->Draw(("fit_time["+detector+"]-time[MCP1]>>tD1").c_str());
+	//Drawing Time Maps MCP1
+	TimeMaps(h4, detector, "MCP1", MCP1Sel+" && "+AmpSel, std::to_string(Xshift), std::to_string(Yshift), XMax, YMax, bound, RunStats, tD_APD_MCP1->GetFunction("gaus")->GetParameter(1), tD_APD_MCP1->GetFunction("gaus")->GetParameter(2));
 	
-	TCanvas* c1 = new TCanvas("c1", "c1");
-	tD1->GetXaxis()->SetRangeUser(Xfirst, Xlast);
-	tD1->Fit("gaus", "", "", Xfirst, Xlast);
-	tD1->Draw();
-	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-MCP1_"+RunStats+".png").c_str());
-	c1->SaveAs((pathToOutput+"fitTimeDist/RawTimeDistribution/TimeNoCut_"+detector+"-MCP1_"+RunStats+".pdf").c_str());
-
+	
 	
 
 
 
 	//Selection on MCP2 time && amplitude
 	TimeMCP2 = std::to_string(MeanTimeMCP(h4, PosSel, pathToOutput+"fitTimeDist/", RunStats, "MCP2"));
-	std::string MCP2Sel = "amp_max[MCP2]>100 && fabs(time[MCP2]-("+TimeMCP2+"))<7";
+	std::string MCP2Sel = "amp_max[MCP2]>200 && amp_max[MCP2]<3500 && fabs(time[MCP2]-("+TimeMCP2+"))<7";
 
 	std::string tD_APD_MCP2_Sel = PosSel + " && " + MCP2Sel + " && " + AmpSel;
-	cout << tD_APD_MCP2_Sel << endl;
+	//cout << tD_APD_MCP2_Sel << endl;
+	
+	//Drawing Time Maps MCP1
+	TimeMaps(h4, detector, "MCP2", MCP2Sel+" && "+AmpSel, std::to_string(Xshift), std::to_string(Yshift), XMax, YMax, bound, RunStats,0,0);
 
+	//Template fit Chi2 distribution
+	PlotTemplateChi2(h4, detector, "MCP2", tD_APD_MCP2_Sel, RunStats);
+	
 	//plot and fit APD_MCP2 time distribution
 	TH1F* tD_APD_MCP2 = new TH1F("tD_APD_MCP2", "", 2000, -20, 20);
-	if(Energy == "20" && Gain!="200") tD_APD_MCP2->SetBins(750, -40, 40);
+	if(Energy == "20" && Gain!="200") tD_APD_MCP2->SetBins(1500, -40, 40);
 	if(Energy == "20" && Gain=="200") tD_APD_MCP2->SetBins(1500, -40, 40);
 	h4->Draw(("fit_time["+detector+"]-time[MCP2]>>tD_APD_MCP2").c_str(), tD_APD_MCP2_Sel.c_str());
-	
+
+	//setting fit function	
 	Xfirst = tD_APD_MCP2->GetXaxis()->GetBinCenter(tD_APD_MCP2->GetMaximumBin())-1;
 	Xlast = tD_APD_MCP2->GetXaxis()->GetBinCenter(tD_APD_MCP2->GetMaximumBin())+1;
+	TMax = tD_APD_MCP2->GetBinCenter(tD_APD_MCP2->GetMaximumBin());
+	TMaxValue = tD_APD_MCP2->GetMaximum();
+
+	fitFunc->SetRange(Xfirst, Xlast);
+
+	fitFunc->SetParLimits(0, TMaxValue*0.8, TMaxValue*1.3);
+	fitFunc->SetParLimits(1, TMax*0.95, TMax*1.05);
+	fitFunc->SetParLimits(2, 0, 0.15);
+	fitFunc->SetParLimits(3, TMaxValue*0.1, TMaxValue*0.7);
+	fitFunc->SetParLimits(4, TMax*0.975, TMax*0.999);
+	fitFunc->SetParLimits(5, 0, 0.15);
+
+	fitFunc->SetParameter(0, TMaxValue);
+	fitFunc->SetParameter(1, TMax);
+	fitFunc->SetParameter(2, 0.04);
+	fitFunc->SetParameter(3, TMaxValue/5);
+	fitFunc->SetParameter(4, TMax*0.98);
+	fitFunc->SetParameter(5, 0.06);	
+
+	
 
 	TCanvas* c2 = new TCanvas("c2", "c2");
 	tD_APD_MCP2->GetXaxis()->SetRangeUser(Xfirst, Xlast);
 	tD_APD_MCP2->GetXaxis()->SetTitle(("time["+detector+"]-time[MCP2] (ns)").c_str());
 	tD_APD_MCP2->GetYaxis()->SetTitle("events");
 	tD_APD_MCP2->Fit("gaus", "", "", Xfirst, Xlast);
+	//tD_APD_MCP2->Fit("fitFunc", "R", "", Xfirst, Xlast);
 	tD_APD_MCP2->Draw();
+
+	gaus0->SetRange(Xfirst, Xlast);
+	gaus1->SetRange(Xfirst, Xlast);
+
+	gaus0->SetParameter(0, fitFunc->GetParameter("A0"));
+	gaus0->SetParameter(1, fitFunc->GetParameter("Mean0"));
+	gaus0->SetParameter(2, fitFunc->GetParameter("Sigma0"));
+
+	gaus1->SetParameter(0, fitFunc->GetParameter("A1"));
+	gaus1->SetParameter(1, fitFunc->GetParameter("Mean1"));
+	gaus1->SetParameter(2, fitFunc->GetParameter("Sigma1"));
+
+	gaus0->SetLineColor(kBlue);
+	//gaus0->Draw("SAME");
+
+	gaus1->SetLineColor(kGreen);
+	//gaus1->Draw("SAME");
+	/*
+	C = std::to_string(fitFunc->GetMaximum()/2);
+	g = new TF1("g", ("fitFunc-"+C).c_str(), Xfirst, Xlast);  
+
+	Xleft = NumericalRootFinder(g, fitFunc->GetMaximumX()-0.5, fitFunc->GetMaximumX());
+	Xright = NumericalRootFinder(g, fitFunc->GetMaximumX(), fitFunc->GetMaximumX()+0.5);
+
+	cout << "\nXleft = " << Xleft << endl;
+	cout << "Xright = " << Xright << endl;
+	cout << "Resolution i.e (FWHM/2) = " << 0.5*(Xright-Xleft) << endl << endl;
+	*/
 
 	c2->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP2_"+RunStats+".png").c_str());
 	c2->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP2_"+RunStats+".pdf").c_str());
 
-	
+	//Drawing Time Maps MCP2
+	TimeMaps(h4, detector, "MCP2", MCP1Sel+" && "+AmpSel, std::to_string(Xshift), std::to_string(Yshift), XMax, YMax, bound, RunStats, tD_APD_MCP2->GetFunction("gaus")->GetParameter(1), tD_APD_MCP2->GetFunction("gaus")->GetParameter(2));
+
+
+
+
 
 
 	//Selection on both MCP time & amplitude
 	std::string tD_APD_MCP_Mean_Sel = PosSel + " && " + MCP1Sel + " && " + MCP2Sel + " && " + AmpSel;
-	cout << tD_APD_MCP_Mean_Sel << endl;
+	//cout << tD_APD_MCP_Mean_Sel
 	
 	//plot and fit APD_MCP_Mean time distribution
 	
@@ -140,54 +258,8 @@ void fitTimeDist(std::string FileIn, std::string detector, Float_t bound)
 
 	c3->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP_Mean_"+RunStats+".png").c_str());
 	c3->SaveAs((pathToOutput+"fitTimeDist/FinalTimeDistribution/Time_"+detector+"-MCP_Mean_"+RunStats+".pdf").c_str());
-
-	cout << tD_APD_MCP1->GetFunction("gaus")->GetParError(1) << endl;
-	cout << tD_APD_MCP1->GetBinContent(tD_APD_MCP1->GetMaximumBin()) << "    " << tD_APD_MCP1->GetBinError(tD_APD_MCP1->GetMaximumBin()) << endl;
-
+	
+	
 }
 
-/*
-	//fit with two gaussian
-	TF1 *fitFunc = new TF1("fitFunc", "[0]*exp(-((x-[1])*(x-[1]))/2*([2]*[2])) + [3]*exp(-((x-[4])*(x-[4]))/2*([5]*[5]))", Xfirst+0.6, Xlast-0.6); 
-	
-	fitFunc->SetParName(0,"A0");
-	fitFunc->SetParName(1,"Mean0");
-	fitFunc->SetParName(2,"Sigma0");
-	fitFunc->SetParName(3,"A1");
-	fitFunc->SetParName(4,"Mean1");
-	fitFunc->SetParName(5,"Sigma1");
 
-	fitFunc->SetParLimits(0, 0, tD->GetMaximum()*1.05);
-	fitFunc->SetParLimits(2, 0, 1);
-	fitFunc->SetParLimits(3, 0, tD->GetMaximum()*1.05);
-	fitFunc->SetParLimits(5, 0, 1);
-
-	fitFunc->SetParameter(0, tD->GetMaximum()*0.5);
-	fitFunc->SetParameter(1, 4.5);
-	fitFunc->SetParameter(2, 0.5);
-
-	fitFunc->SetParameter(3, tD->GetMaximum()*0.5);
-	fitFunc->SetParameter(4, 4.5);
-	fitFunc->SetParameter(5, 0.2);
-
-	tD->Fit("fitFunc", "", "", Xfirst+0.6, Xlast-0.6);
-	tD->Draw();
-	
-	//draw components
-	TF1* gaus0 = new TF1("gaus0", "gaus", Xfirst+0.6, Xlast-0.6);
-	TF1* gaus1 = new TF1("gaus1", "gaus", Xfirst+0.6, Xlast-0.6);
-
-	gaus0->SetParameter(0, fitFunc->GetParameter("A0"));
-	gaus0->SetParameter(1, fitFunc->GetParameter("Mean0"));
-	gaus0->SetParameter(2, fitFunc->GetParameter("Sigma0"));
-
-	gaus1->SetParameter(0, fitFunc->GetParameter("A1"));
-	gaus1->SetParameter(1, fitFunc->GetParameter("Mean1"));
-	gaus1->SetParameter(2, fitFunc->GetParameter("Sigma1"));
-
-	gaus0->SetLineColor(kBlue);
-	gaus0->Draw("SAME");
-
-	gaus1->SetLineColor(kGreen);
-	gaus1->Draw("SAME");
-	*/	

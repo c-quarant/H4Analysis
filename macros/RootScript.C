@@ -1,18 +1,18 @@
 #include "FitRes.C"
 
-void RootScript()
+void RootScript(std::string fitType)
 {
 	int k;
 
-	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCP1.dat", "C3-MCP1", k);
-	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCP2.dat", "C3-MCP2", k);
-	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCPMean.dat", "C3-MCP_Mean", k);
+	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCP1.dat", "C3-MCP1"+fitType, k);
+	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCP2.dat", "C3-MCP2"+fitType, k);
+	for(k=1; k<3; k++)FitRes("FinalResolution/C3wrtMCPMean.dat", "C3-MCP_Mean"+fitType, k);
 
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCP1.dat", "C0APD1-MCP1", k);
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCP2.dat", "C0APD1-MCP2", k);
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCPMean.dat", "C0APD1-MCP_Mean", k);
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCP1.dat", "C0APD1-MCP1"+fitType, k);
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCP2.dat", "C0APD1-MCP2"+fitType, k);
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD1wrtMCPMean.dat", "C0APD1-MCP_Mean"+fitType, k);
 
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCP1.dat", "C0APD2-MCP1", k);
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCP2.dat", "C0APD2-MCP2", k);
-	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCPMean.dat", "C0APD2-MCP_Mean", k);	
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCP1.dat", "C0APD2-MCP1"+fitType, k);
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCP2.dat", "C0APD2-MCP2"+fitType, k);
+	for(k=1; k<4; k++)FitRes("FinalResolution/C0APD2wrtMCPMean.dat", "C0APD2-MCP_Mean"+fitType, k);	
 } 

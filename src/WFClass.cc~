@@ -386,7 +386,7 @@ WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
         //---fit
         minimizer->Minimize();
         tempFitAmp_ = minimizer->X()[0];
-	//cout << "tempFitAmp_  " << tempFitAmp_ << endl;
+	cout << "tempFitAmp_  " << tempFitAmp_ << endl;
         tempFitTime_ = minimizer->X()[1];
 	fStatus_ = minimizer->Status();
 

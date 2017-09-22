@@ -563,6 +563,14 @@ void WFPulseShapes(TTree* h4, std::string detector, int plane, float XMax, float
 	TProfile *waveForm = new TProfile(("XTAL_"+detector+"_"+RunStats+"_prof_").c_str(), "", 2048, -204.8, 204.8);
 	waveForm = (TProfile*)aSlices[1];
 
+	int NBins=2048;
+	for(i=0; i<=NBins; i++)
+	{
+		if(waveForm->GetBinContent(i)<0)waveForm->SetBinContent(i, 0);
+		cout << waveForm->GetBinContent(i) << "\t" << waveForm->GetBinError(i) << "\t";
+		
+	}
+
 	p2D_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
     	h2_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
     	waveForm->GetXaxis()->SetTitle("WF_time");

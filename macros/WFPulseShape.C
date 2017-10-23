@@ -58,6 +58,7 @@ void WFPulseShape(std::string FileIn, std::string detector, Float_t bound, std::
 	std::string AmplMCPSel = "amp_max[MCP1]>200 && amp_max[MCP1]<2000";
 	AmplitudeProfilesFit(h4, detector, AmplMCPSel, pathToOutput, RunStats, bound, &XMax, &YMax, Xshift, Yshift, "amp_max");
 	AmplitudeMaps(h4, detector, AmplMCPSel, std::to_string(Xshift), std::to_string(Yshift), XMax, YMax, bound, RunStats, "amp_max");
+	EfficiencyMaps(h4, detector, AmplMCPSel, std::to_string(Xshift), std::to_string(Yshift), XMax, YMax, bound, RunStats);
 
 	if(fabs(XMax)<100 && fabs(YMax)<100)
 	{

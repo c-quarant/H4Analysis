@@ -53,10 +53,12 @@ public:
 	std::string Run;
 	std::string Gain;
 	std::string Energy;
+	std::string RunStats;
 
 	//ctor
 	TimeAnalysisTools() {};
 	TimeAnalysisTools(TTree* ntupleTree, std::vector<std::string> RunAPDList, std::vector< std::string > RunMCPList, float bound_);
+	TimeAnalysisTools(TTree* ntupleTree, std::vector<std::string> RunAPDList, std::vector< std::string > RunMCPList);
 	//dtor
 	~TimeAnalysisTools(){};
 
@@ -65,19 +67,27 @@ public:
 	void		SetSelections();
 	float		HodoPlaneShift(std::string axis);
 	PlaneCoord 	GetHodoCenter(std::string APD);
+	PlaneCoord 	GetHodoCenterEdge(std::string APD, std::string edge);
 	void 		AmplitudeMaps(std::string APD);
+	void 		AmplitudeMapsEdge(std::string APD, std::string edge);
 	void		TimeMaps(std::string APD, std::string MCP);
+	void		DrawFreqSpec(std::string APD, std::string MCP);
+	void		DrawFreqSpecPedestal(std::string APD);
 	float 		MeanTimeMCP(std::string MCP);
-	GaussPar 	AmplitudeDistribution(std::string APD);
+	GaussPar 	AmplitudeDistributionFit2Gaus(std::string APD);
+	GaussPar 	NoiseAmplitudeDistributionFit(TTree* h4Noise, std::string APD);	
 	GaussPar	TimeAPDvsMCP(std::string APD, std::string MCP);
+	GaussPar	TimeAPDvsMCPedge(std::string APD, std::string MCP);
 	GaussPar	TimeAPDvsMCPMean(std::string APD);
 	GaussPar	TimeAPDvsAPD(std::string APD1, std::string APD2);
-	//GaussPar	ComputeAvsNoise(){};
+	GaussPar	TimeXTALvsXTAL(std::string APD1, std::string APD2);
+	void		TimeXTALvsXTALAeff(std::string APD1, std::string APD2);
+	GaussPar	ComputeAvsNoise(std::string APD);
+	void		ComputeAvsNoiseEdge(std::string APD1, std::string APD2);
 
 protected:
 	TTree* h4;
 
-	std::string RunStats;
 	std::vector< std::string > APDList;
 	std::vector< std::string > MCPList;	
 
@@ -89,13 +99,12 @@ protected:
 	std::string Xshift_str;
 	std::string Yshift_str;
 
-	std::map< std::string, PlaneCoord > Center;
+	std::map< std::string, PlaneCoord > Center;	
+	std::map< std::string, GaussPar > Amplitude, NoiseAmpl, TimeResults, NoiseAmplitude;
 	float MeanTimeMCP1;
 	float MeanTimeMCP2;
 	GaussPar Default;
-	GaussPar Amplitude;
-	GaussPar TimeResults;
-
+	
 	//selection strings
 	std::map< std::string, std::string > DeviceSelections;
 };

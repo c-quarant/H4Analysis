@@ -54,9 +54,9 @@ void AmplitudeMaps(std::string FileIN, std::string detector)
   	Nentries = h4->GetEntries();
   	
 	
-   	h4->Draw(("amp_max["+detector+"]:Y[0]:X[0]>>AmpXY0").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<3000 && X[0]>-800 && Y[0]>-800");
-  	h4->Draw(("amp_max["+detector+"]:Y[1]-("+Yshift_str+"):X[1]-("+Xshift_str+")>>AmpXY1").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<3000 && X[1]>-800 && Y[1]>-800");
-  	h4->Draw(("amp_max["+detector+"]:(0.5*(Y[0]+Y[1]-("+Yshift_str+"))):(0.5*(X[0]+X[1]-("+Xshift_str+")))>>AmpXYM").c_str(), "amp_max[MCP1]>00 && amp_max[MCP1]<3000 && X[0]>-800 && Y[0]>-800 && X[1]>-800 && Y[1]>-800");
+   	h4->Draw(("amp_max["+detector+"]:Y[0]:X[0]>>AmpXY0").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<2000 && X[0]>-800 && Y[0]>-800");
+  	h4->Draw(("amp_max["+detector+"]:Y[1]-("+Yshift_str+"):X[1]-("+Xshift_str+")>>AmpXY1").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<2000 && X[1]>-800 && Y[1]>-800");
+  	h4->Draw(("amp_max["+detector+"]:(0.5*(Y[0]+Y[1]-("+Yshift_str+"))):(0.5*(X[0]+X[1]-("+Xshift_str+")))>>AmpXYM").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<2000 && X[0]>-800 && Y[0]>-800 && X[1]>-800 && Y[1]>-800");
 
   	//Drawing p0 histogram
   	TCanvas* c1 = new TCanvas("c1","c1");
@@ -69,13 +69,13 @@ void AmplitudeMaps(std::string FileIN, std::string detector)
   	H1->Draw();	
   	AmpXY0->Draw("COLZ SAME");
   	
-  	std::string fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/Amplitude_maps/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p0" + ".pdf";
-  	std::string fileOutpng = "/afs/cern.ch/user/c/cquarant/www/Amplitude_maps/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p0" + ".png";
+  	std::string fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane0/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p0" + ".pdf";
+  	std::string fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane0/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p0" + ".png";
   	
-  	/*
+  	
   	c1->SaveAs(fileOutpdf.c_str());
   	c1->SaveAs(fileOutpng.c_str());
-  	*/
+  	
   	//Drawing p1 histogram
   	TCanvas* c2 = new TCanvas("c2","c2");
   	H1->GetXaxis()->SetTitle("X[1]");    
@@ -84,13 +84,13 @@ void AmplitudeMaps(std::string FileIN, std::string detector)
   	H1->Draw();	
   	AmpXY1->Draw("COLZ SAME");
   	
-  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/Amplitude_maps/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p1" + ".pdf";
-  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/Amplitude_maps/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p1" + ".png";
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane1/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p1" + ".pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane1/AmpXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_p1" + ".png";
   	
-	/*
+	
   	c2->SaveAs(fileOutpdf.c_str());
   	c2->SaveAs(fileOutpng.c_str());
-  	*/
+  	
   	//Drawving pAVG histogram
   	TCanvas* c3 = new TCanvas("c3","c3");
   	H1->GetXaxis()->SetTitle("X_AVG");    
@@ -99,10 +99,29 @@ void AmplitudeMaps(std::string FileIN, std::string detector)
   	H1->Draw();	
   	AmpXYM->Draw("COLZ SAME");
   	
-  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/Amp_plot/AmpXY_NoMCPCut_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".pdf";
-  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/Amp_plot/AmpXY_NoMCPCUt_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".png";
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/AmpXY_NoMCPCut_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/AmpXY_NoMCPCUt_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".png";
   	
   	
   	c3->SaveAs(fileOutpdf.c_str());
   	c3->SaveAs(fileOutpng.c_str());
+
+	auto *EventsXYM = new TH2D("EventsXYM","", 32, -16, 16, 32, -16, 16); 
+  	
+  	h4->Draw(("(0.5*(Y[0]+Y[1]-("+Yshift_str+"))):(0.5*(X[0]+X[1]-("+Xshift_str+")))>>EventsXYM").c_str(), "amp_max[MCP1]>200 && amp_max[MCP1]<2000 && X[0]>-800 && Y[0]>-800 && X[1]>-800 && Y[1]>-800");
+
+	//Drawving pAVG histogram
+  	TCanvas* c4 = new TCanvas("c4","c4");
+  	H1->GetXaxis()->SetTitle("X_AVG");    
+  	H1->GetYaxis()->SetTitle("Y_AVG");
+  	
+  	H1->Draw();	
+  	EventsXYM->Draw("COLZ SAME");
+  	
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/EventsXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/EventsXY_" + detector + "_G" + Gain + "_" + Energy + "Gev_pAVG" + ".png";
+  	
+  	
+  	c4->SaveAs(fileOutpdf.c_str());
+  	c4->SaveAs(fileOutpng.c_str());
 }				

@@ -562,14 +562,23 @@ void WFPulseShapes(TTree* h4, std::string detector, int plane, float XMax, float
 	
 	TProfile *waveForm = new TProfile(("XTAL_"+detector+"_"+RunStats+"_prof_").c_str(), "", 2048, -204.8, 204.8);
 	waveForm = (TProfile*)aSlices[1];
-
-	int NBins=2048;
-	for(i=0; i<=NBins; i++)
+	
+	int NBins=2048, C=0;
+	for(i=1; i<NBins; i++)
 	{
-		if(waveForm->GetBinContent(i)<0)waveForm->SetBinContent(i, 0);
-		cout << waveForm->GetBinContent(i) << "\t" << waveForm->GetBinError(i) << "\t";
-		
+		if((waveForm->GetBinCenter(i)>0 || waveForm->GetBinCenter(i)<50) && waveForm->GetBinError(i)>0.3)
+		{
+			waveForm->SetBinError(i, 0.01);
+			C++;
+		}
+		if((waveForm->GetBinCenter(i)<-25 || waveForm->GetBinCenter(i)>165) && (waveForm->GetBinContent(i)>0.08 || waveForm->GetBinError(i)>0.1))
+		{
+			waveForm->SetBinContent(i,0);
+			waveForm->SetBinError(i, 0.01);
+			C++;
+		}
 	}
+	cout << "CORRECTIONS:   " << C << endl;
 
 	p2D_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
     	h2_amp_vs_time->GetXaxis()->SetTitle("WF_time (ns)");
@@ -1180,6 +1189,111 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelMCP){
 	c3->SaveAs(("/afs/cern.ch/user/c/cquarant/www/TimeResolutionFit/TimeRes_vs_ANoise_"+Detector_str+"-"+MCP_str+"AllGain.pdf").c_str());
 
 			
+}
+
+void EfficiencyMaps(TTree* h4, std::string detector, std::string Selection, std::string Xshift_str, std::string Yshift_str, float XCenter, float YCenter, float bound, std::string RunStats)
+{	
+	gStyle->SetOptStat(0);
+  	int i, Nentries, CH, runNum; 
+  	float AmpTemp;
+    	
+  	h4->GetEntry(0);
+ 	CH=h4->GetLeaf(detector.c_str())->GetValue(0);
+
+	h4->GetEntry(0);
+	CH=h4->GetLeaf(detector.c_str())->GetValue(0);
+	Nentries = h4->GetEntries();
+	runNum = h4->GetLeaf("run")->GetValue(0);
+
+	//2DHist definition 
+  	auto *AmpXY0 = new TH2D("AmpXY0","", 32, -16, 16, 32, -16, 16); 
+  	auto *AmpXY1 = new TH2D("AmpXY1","", 32, -16, 16, 32, -16, 16); 
+  	auto *AmpXYM = new TH2D("AmpXYM","", 32, -16, 16, 32, -16, 16); 
+  	
+  	Nentries = h4->GetEntries();
+  	
+
+   	h4->Draw("Y[0]:X[0]>>AmpXY0", (Selection + " && X[0]>-800 && Y[0]>-800").c_str());
+  	h4->Draw(("Y[1]-("+Yshift_str+"):X[1]-("+Xshift_str+")>>AmpXY1").c_str(), (Selection + " && X[1]>-800 && Y[1]>-800").c_str());
+  	h4->Draw(("(0.5*(Y[0]+Y[1]-("+Yshift_str+"))):(0.5*(X[0]+X[1]-("+Xshift_str+")))>>AmpXYM").c_str(), (Selection + " && X[0]>-800 && Y[0]>-800 && X[1]>-800 && Y[1]>-800").c_str());
+
+  	//Drawing p0 histogram
+  	TCanvas* c1 = new TCanvas("c1","c1");
+	//FPCanvasStyle(c1, "", "", 0, "", 0, 1);
+  	TH2F* H1 = new TH2F("H1","", 32, -16, 16, 32, -16, 16);     
+  	H1->GetXaxis()->SetTitle("X[0]");    
+  	H1->GetYaxis()->SetTitle("Y[0]");
+  	AmpXY0->GetZaxis()->SetTitle(("amp_max["+detector+"] (ADC counts)").c_str());
+  	
+  	H1->Draw();	
+  	AmpXY0->Draw("COLZ SAME");
+
+	TLine *line_left = new TLine(XCenter-bound, YCenter-bound, XCenter-bound, YCenter+bound);
+	line_left->SetLineColor(kRed);
+	line_left->Draw();
+
+	TLine *line_right = new TLine(XCenter+bound, YCenter-bound, XCenter+bound, YCenter+bound);
+	line_right->SetLineColor(kRed);
+	line_right->Draw();
+
+	TLine *line_up = new TLine(XCenter-bound, YCenter+bound, XCenter+bound, YCenter+bound);
+	line_up->SetLineColor(kRed);
+	line_up->Draw();
+
+	TLine *line_down = new TLine(XCenter-bound, YCenter-bound, XCenter+bound, YCenter-bound);
+	line_down->SetLineColor(kRed);
+	line_down->Draw();
+  	
+  	std::string fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane0/EventsXY_" + detector + "_" + RunStats + ".pdf";
+  	std::string fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane0/EventsXY_" + detector + "_" + RunStats + ".png";
+  	
+  	c1->SaveAs(fileOutpdf.c_str());
+  	c1->SaveAs(fileOutpng.c_str());
+  
+
+  	//Drawing p1 histogram
+  	TCanvas* c2 = new TCanvas("c2","c2");
+  	H1->GetXaxis()->SetTitle("X[1]");    
+  	H1->GetYaxis()->SetTitle("Y[1]");
+  	
+  	H1->Draw();	
+  	AmpXY1->Draw("COLZ SAME");
+
+	line_left->Draw();
+	line_right->Draw();
+	line_up->Draw();
+	line_down->Draw();	
+  	
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane1/EventsXY_" + detector + "_" + RunStats + ".pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/Plane1/EventsXY_" + detector + "_" + RunStats + ".png";
+
+  	c2->SaveAs(fileOutpdf.c_str());
+  	c2->SaveAs(fileOutpng.c_str());
+  	
+
+  	//Drawving pAVG histogram
+  	TCanvas* c3 = new TCanvas("c3","c3");
+  	H1->GetXaxis()->SetTitle("X_AVG");    
+  	H1->GetYaxis()->SetTitle("Y_AVG");
+  	
+  	H1->Draw();	
+  	AmpXY1->Draw("COLZ SAME");
+  	
+	line_left->Draw();
+	line_right->Draw();
+	line_up->Draw();
+	line_down->Draw();	
+
+  	fileOutpdf = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/EventsXY_" + detector + "_" + RunStats + ".pdf";
+  	fileOutpng = "/afs/cern.ch/user/c/cquarant/www/AmplitudeMaps/PlaneAVG/EventsXY_" + detector + "_" + RunStats + ".png";  
+  	
+  	c3->SaveAs(fileOutpdf.c_str());
+  	c3->SaveAs(fileOutpng.c_str());
+	
+	H1->~TH2F();
+	c1->~TCanvas();
+	c2->~TCanvas();
+	c3->~TCanvas();
 }
 #endif	
 

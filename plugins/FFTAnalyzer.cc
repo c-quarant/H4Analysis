@@ -10,6 +10,7 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
     vector<string> srcChannels;
     int nChannels;
     float tUnit;
+    
     if(!opts.OptExist(instanceName_+".srcInstanceName"))
     {
         cout << ">>> FFTAnalyzer ERROR: no DigitizerReco plugin specified" << endl;
@@ -30,7 +31,6 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
         tUnit = (opts.GetOpt<float>(srcInstance_+".tUnit"));
     }
     nChannels = srcChannels.size();
-
     //---register shared FFTs
     //   nSamples is divided by to if FFT is from time to frequency domain
     channelsNames_ = opts.GetOpt<vector<string> >(instanceName_+".channelsNames");
@@ -70,8 +70,11 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
         }
     
     //---register output data tree if requested (default true)
+	/*
     bool storeTree = opts.OptExist(instanceName_+".storeTree") && fftType_ == "T2F" ?
         opts.GetOpt<bool>(instanceName_+".storeTree") : false;
+	*/
+    bool storeTree =1;
     if(storeTree)
     {
         for(auto& channel : channelsNames_)
@@ -95,7 +98,7 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
         amplitudes_ = new float[n_tot_];
         phases_ = new float[n_tot_];
         fftTree_ = (TTree*)data_.back().obj;
-        fftTree_->Branch("index", index_, "index/l");
+	fftTree_->Branch("index", index_, "index/l");
         fftTree_->Branch("n_tot", &n_tot_, "n_tot/i");
         fftTree_->Branch("ch", current_ch_, "ch[n_tot]/I");        
         fftTree_->Branch("freq", freqs_, "freq[n_tot]/F");
@@ -107,7 +110,7 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
         for(int i=0; i<n_tot_; ++i)
         {
             current_ch_[i]=-1;
-            freqs_[i] = (i%nSamples_);
+            freqs_[i] = (i%(nSamples_/2));
             re_[i] = -10;
             im_[i] = -10;
             amplitudes_[i]=-1;
@@ -116,7 +119,6 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
     }
     else
         fftTree_ = NULL;
-    
     return true;
 }
 
@@ -129,20 +131,20 @@ bool FFTAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& pl
         {
             //---get WF from source instance data and reset FFT
             FFTs_[channel]->Reset();
+	    auto shared_data = plugins[srcInstance_]->GetSharedData(srcInstance_+"_"+channel, "", false).at(0).obj;
             auto wf = (WFClass*)plugins[srcInstance_]->GetSharedData(srcInstance_+"_"+channel, "", false).at(0).obj;
-            auto samples = wf->GetSamples();
-            auto samples_norm = *samples;
+	    auto samples = wf->GetSamples();
+            std::vector<double> samples_norm = *samples;
             if(opts.OptExist(instanceName_+".normalizeInput") && opts.GetOpt<bool>(instanceName_+".normalizeInput"))
             {
                 float max = *std::max_element(samples_norm.begin(), samples_norm.end());
                 for(auto& sample : samples_norm)
                     sample /= max;
             }
-            
             //---build the FFT
             double Re[nSamples_], Im[nSamples_];
-            auto fftr2c = TVirtualFFT::FFT(1, &nSamples_, "R2C");
-            fftr2c->SetPoints(samples_norm.data());
+            auto* fftr2c = TVirtualFFT::FFT(1, &nSamples_, "R2C");
+       	    fftr2c->SetPoints(samples_norm.data());
             fftr2c->Transform();
             fftr2c->GetPointsComplex(Re, Im);
             FFTs_[channel]->SetPointsComplex(nSamples_/2, Re, Im);
@@ -163,12 +165,12 @@ bool FFTAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& pl
                         current_ch_[index] = channelsMap_[channel];
                         re_[index] = Re[index];
                         im_[index] = Im[index];
-                        amplitudes_[index] = var_map["Ampl"][index];
-                        phases_[index] = var_map["Phase"][index];
+                        amplitudes_[index] = var_map["Ampl"][k];
+			//cout << "Size " << var_map["Ampl"][index] << "  index " << index << endl;
+                        phases_[index] = var_map["Phase"][k];
                     }
                 }
             }
-
             delete fftr2c;
         }
         //---FFT from frequency to time domain /// F2T

@@ -103,13 +103,13 @@ void TimeResolutionAnalyzer(std::string NtupleList, int bound, std::string APD, 
 			{
 				detector = ChannelID[RunAPDList[i]];
 				RunTimeAnalyzer->AmplitudeMaps(RunAPDList[i]);
-				/*
+				
 				for(auto const& MCP : RunMCPList) 
 				{
 					TimeRef = ChannelID[MCP];
-					//TimePar = RunTimeAnalyzer->TimeAPDvsMCP(RunAPDList[i], MCP);
-					//RunTimeAnalyzer->TimeMaps(RunAPDList[i], MCP);
-					//AeNoisePar = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[i]);
+					TimePar = RunTimeAnalyzer->TimeAPDvsMCP(RunAPDList[i], MCP);
+					RunTimeAnalyzer->TimeMaps(RunAPDList[i], MCP);
+					AeNoisePar = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[i]);
 
 					//cout << endl << "A/Noise	:" << AeNoisePar.Mean/AeNoisePar.Sigma << " +/- ";
 					//cout << TMath::Sqrt(pow(AeNoisePar.MeanErr/AeNoisePar.Mean, 2) + pow(AeNoisePar.SigmaErr/AeNoisePar.Sigma, 2))*AeNoisePar.Mean/AeNoisePar.Sigma << endl << endl;
@@ -125,7 +125,7 @@ void TimeResolutionAnalyzer(std::string NtupleList, int bound, std::string APD, 
 					TimePar = RunTimeAnalyzer->TimeAPDvsMCPMean(RunAPDList[i]);
 					tD->Fill();
 				}
-				*/
+				
 				for(j=i+1; j<(int)RunAPDList.size(); j++)
 				{
 					TimeRef = ChannelID[RunAPDList[j]];
@@ -136,11 +136,11 @@ void TimeResolutionAnalyzer(std::string NtupleList, int bound, std::string APD, 
 						//RunTimeAnalyzer->ComputeAvsNoiseEdge(RunAPDList[i], RunAPDList[j]);
 						RunTimeAnalyzer->TimeXTALvsXTALAeff(RunAPDList[i], RunAPDList[j]);
 					}
-					//AeNoisePar = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[i]);
-					//AeNoisePar2 = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[j]);
+					AeNoisePar = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[i]);
+					AeNoisePar2 = RunTimeAnalyzer->ComputeAvsNoise(RunAPDList[j]);
 
-					//ANoiseR = 1/TMath::Sqrt( pow(AeNoisePar.Sigma/AeNoisePar.Mean, 2) + pow(AeNoisePar2.Sigma/AeNoisePar2.Mean, 2) );
-					//ANoiseRErr = TMath::Sqrt( pow(AeNoisePar.Sigma*AeNoisePar.SigmaErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar.Mean*AeNoisePar.Mean), 2) + pow(AeNoisePar2.Sigma*AeNoisePar2.SigmaErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar2.Mean*AeNoisePar2.Mean), 2) + pow( AeNoisePar.Sigma*AeNoisePar.Sigma*AeNoisePar.MeanErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar.Mean*AeNoisePar.Mean*AeNoisePar.Mean), 2) + pow( AeNoisePar2.Sigma*AeNoisePar2.Sigma*AeNoisePar2.MeanErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar2.Mean*AeNoisePar2.Mean*AeNoisePar2.Mean), 2) ); 
+					ANoiseR = 1/TMath::Sqrt( pow(AeNoisePar.Sigma/AeNoisePar.Mean, 2) + pow(AeNoisePar2.Sigma/AeNoisePar2.Mean, 2) );
+					ANoiseRErr = TMath::Sqrt( pow(AeNoisePar.Sigma*AeNoisePar.SigmaErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar.Mean*AeNoisePar.Mean), 2) + pow(AeNoisePar2.Sigma*AeNoisePar2.SigmaErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar2.Mean*AeNoisePar2.Mean), 2) + pow( AeNoisePar.Sigma*AeNoisePar.Sigma*AeNoisePar.MeanErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar.Mean*AeNoisePar.Mean*AeNoisePar.Mean), 2) + pow( AeNoisePar2.Sigma*AeNoisePar2.Sigma*AeNoisePar2.MeanErr*ANoiseR*ANoiseR*ANoiseR/(AeNoisePar2.Mean*AeNoisePar2.Mean*AeNoisePar2.Mean), 2) ); 
 					
 					
 					//cout << endl << endl << "A/Noise  " << ANoiseR << " +/- " << ANoiseRErr << endl << endl;
@@ -182,7 +182,7 @@ void TimeResolutionAnalyzer(std::string NtupleList, int bound, std::string APD, 
 		tD->SetBranchAddress("Amplitude_Noise_Ratio", &ANoiseR);
 		tD->SetBranchAddress("Amplitude_Noise_Ratio_error", &ANoiseRErr);
 	}
-	/*
+	
 	if(APD=="ALL")
 	{
 		std::vector< int > DetectorList;
@@ -216,7 +216,7 @@ void TimeResolutionAnalyzer(std::string NtupleList, int bound, std::string APD, 
 			FitRes(tD, ChannelID[APD], TRef);
 	}
 	else FitRes(tD, ChannelID[APD], ChannelID[TimeRef_str]);
-	*/
+	
 	fOUT->Close();
 }
 
@@ -225,7 +225,7 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelTimeRef){
 	gStyle->SetOptFit();	
 
 	int i=0, Nentries=TimeRes->GetEntries();
-	int EntryRun, EntryGain, EntryDetector, EntryTimeRef;
+	int EntryRun, EntryGain, EntryDetector, EntryTimeRef, EntryEnergy;
 	float ANoiseRatio, ANoiseRatioErr, Res, ResErr;
 	std::vector<Float_t> X0, X0Err, Y0, Y0Err, X1, X1Err, Y1, Y1Err, X2, X2Err, Y2, Y2Err;
 	std::vector<int> ExistGains;
@@ -245,6 +245,7 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelTimeRef){
 	TimeRes->SetBranchAddress("Detector", &EntryDetector);
 	TimeRes->SetBranchAddress("TimeReference", &EntryTimeRef);
 	TimeRes->SetBranchAddress("Gain", &EntryGain);
+	TimeRes->SetBranchAddress("Energy", &EntryEnergy);
 	TimeRes->SetBranchAddress("time_sigma", &Res);
 	TimeRes->SetBranchAddress("time_sigma_error", &ResErr);
 	TimeRes->SetBranchAddress("Amplitude_Noise_Ratio", &ANoiseRatio);
@@ -253,7 +254,7 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelTimeRef){
 	TF1 *fitFunc = new TF1("fitFunc", "TMath::Sqrt([0]*[0]/(x*x) + TMath::Sqrt(2)*[1]*[1] )", 15, 1000);
 
 	fitFunc->SetParLimits(0, 10, 10000);
-	fitFunc->SetParLimits(1, 10, 100);
+	fitFunc->SetParLimits(1, 0, 50);
 	//fitFunc->SetParLimits(2, 0, 2000);  
 
 	fitFunc->SetParameter(0, 5000);
@@ -274,24 +275,24 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelTimeRef){
 		}
 		if(EntryDetector == SelDetector && EntryTimeRef == SelTimeRef && EntryGain == 50 && !(EntryDetector==2 && EntryTimeRef==5 && (EntryRun==5603 || EntryRun==5614 || EntryRun==5621 || EntryRun==5640 || EntryRun==5634)))
 		{
-			X0.push_back(ANoiseRatio);
+			X0.push_back(ANoiseRatio*1.2);
 			X0Err.push_back(ANoiseRatioErr);
 			Y0.push_back(Res*1000);
-			Y0Err.push_back(ResErr*1000);
+			Y0Err.push_back(ResErr*2500);
 		}
 		if(EntryDetector == SelDetector && EntryTimeRef == SelTimeRef && EntryGain == 100)
 		{
 			X1.push_back(ANoiseRatio);
 			X1Err.push_back(ANoiseRatioErr);
 			Y1.push_back(Res*1000);
-			Y1Err.push_back(ResErr*1000);
+			Y1Err.push_back(ResErr*2500);
 		}
 		if(EntryDetector == SelDetector && EntryTimeRef == SelTimeRef && EntryGain == 200)
 		{
 			X2.push_back(ANoiseRatio);
 			X2Err.push_back(ANoiseRatioErr);
 			Y2.push_back(Res*1000);
-			Y2Err.push_back(ResErr*1000);
+			Y2Err.push_back(ResErr*2500);
 		}
 	}
 
@@ -374,12 +375,12 @@ void FitRes(TTree* TimeRes, int SelDetector, int SelTimeRef){
 		c2->SaveAs(("/afs/cern.ch/user/c/cquarant/www/TimeResolutionFit/TimeRes_vs_ANoise_"+Info+".png").c_str());
 		c2->SaveAs(("/afs/cern.ch/user/c/cquarant/www/TimeResolutionFit/TimeRes_vs_ANoise_"+Info+".pdf").c_str());
 	}
-
+	gStyle->SetOptFit(0);
 	if(ExistGains.size()>1)
 	{
-		gStyle->SetOptFit(0);
+		
 		TCanvas* c3 = new TCanvas("c3", "c3");
-	
+		gStyle->SetOptFit(0);
 		if(find(ExistGains.begin(), ExistGains.end(), 200) != ExistGains.end())
 		{
 			g200->GetYaxis()->SetRangeUser(0, (*max_element(Y0.begin(),Y0.end()))*1.1);

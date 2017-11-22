@@ -2,7 +2,7 @@
 #include "Riostream.h"
 #include "TObjArray.h"
 
-void XtalXtalTimeResolution(std::string NtupleList, std::string OutputFile)
+void XtalXtalTimeResolution(std::string NtupleList)
 {
 	ifstream in;
 	in.open(NtupleList);
@@ -24,27 +24,7 @@ void XtalXtalTimeResolution(std::string NtupleList, std::string OutputFile)
 	
 	std::string path = "/eos/cms/store/user/meridian/ECALTBH4/cquarant/";
 	std::string ntuple="";
-	/*
-	TTree* tD = new TTree("tD", "Parameters of time distribution (fit)");
 
-	tD->Branch("Run", &Run, "Run/I");
-	tD->Branch("Energy", &Energy, "Energy/I");
-	tD->Branch("Gain", &Gain, "Gain/I");
-	tD->Branch("Detector", &detector, "Detector/I");
-	tD->Branch("TimeReference", &TimeRef, "Time_reference/I");
-
-	tD->Branch("C0APD1", &C0APD1, "C0APD1/I");
-	tD->Branch("C0APD2", &C0APD2, "C0APD2/I");
-	tD->Branch("C2", &C2, "C2/I");
-	tD->Branch("C3", &C3, "C3/I");
-	tD->Branch("C4", &C4, "C4/I");
-	tD->Branch("D3", &D3, "D3/I");
-
-	tD->Branch("time_mean", &TimePar.Mean, "time_mean/F");
-	tD->Branch("time_mean_error", &TimePar.MeanErr, "time_mean_error/F");
-	tD->Branch("time_sigma", &TimePar.Sigma, "time_sigma/F");
-	tD->Branch("time_sigma_error", &TimePar.SigmaErr, "time_sigma_error/F");
-	*/
 	TFile* f;
 	XtalXtalTimeTools* RunTimeAnalyzer;
 
@@ -61,17 +41,13 @@ void XtalXtalTimeResolution(std::string NtupleList, std::string OutputFile)
 		Run = RunTimeAnalyzer->GetRunNumber();
 		Gain = RunTimeAnalyzer->GetRunGain();
 		Energy = RunTimeAnalyzer->GetRunEnergy();
-			
+	
 		RunTimeAnalyzer->TimeXTALvsXTALAeff();
-			
+		RunTimeAnalyzer->TimeXTALvsMCP((RunTimeAnalyzer->GetAPDList())->at(0));
+		RunTimeAnalyzer->TimeXTALvsMCP((RunTimeAnalyzer->GetAPDList())->at(1));
+		//RunTimeAnalyzer->PulseShape((RunTimeAnalyzer->GetAPDList())->at(0), "MCP1", ">");
+		//RunTimeAnalyzer->PulseShape((RunTimeAnalyzer->GetAPDList())->at(0), "MCP1", "<");
+
 		RunTimeAnalyzer->~XtalXtalTimeTools();
 	}
-	/*
-	//Saving main result of time analysis on a root file called OutputFile
-	TFile* fOUT = TFile::Open(OutputFile, "RECREATE");
-	if(!fOUT) fOUT = new TFile(OutputFile, "RECREATE", "Stores main results of Time Analysis of Xtal wrt Xtal");
-	fOUT->cd();
-	tD->Write();	
-	fOUT->Close();
-	*/
 }

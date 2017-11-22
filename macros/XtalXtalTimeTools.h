@@ -23,6 +23,7 @@
 #include "Math/WrappedTF1.h"
 #include "Math/RootFinderAlgorithms.h"
 #include "TGraphErrors.h"
+#include "TObject.h"
 #include <string>
 #include <fstream>
 #include <math.h>
@@ -45,7 +46,16 @@ struct GaussPar{
 	float SigmaErr;
 
 };
-
+/*
+float fRes(float *x, float *par)
+{
+    if (x[0] > 0 && x[0] < 140) {
+      TF1::RejectPoint();
+      return 0;
+   }
+   return par[0] + par[1]*x[0];
+}
+*/
 class XtalXtalTimeTools{
 public:
 
@@ -61,18 +71,34 @@ public:
 	float		GetRunGain(){return Gain;};
 	float		GetRunEnergy(){return Energy;};
 	std::string	GetRunStats(){return RunStats;};
+	std::vector<std::string>*	GetAPDList(){return &APDList;};
 
 	//utils
 	void		GaussParInit(GaussPar* gP);
-	float		HodoPlaneShift(std::string axis); //OK
-	PlaneCoord	GetXtalCenterEdge(std::string APD, std::string edge); //da rimaneggiare per adattare le selezioni
-	void		AmplitudeMapsEdge(std::string APD, std::string edge); //controllare
+	float		HodoPlaneShift(std::string axis);
+	PlaneCoord	GetXtalCenterEdge(std::string APD, std::string edge);
+	void		HodoPlaneMaps();
 	GaussPar	NoiseAmplitudeDistributionFit(std::string APD);
+	void		AmplitudeMapsEdge(std::string APD);
+
+	// XTAL vs XTAL time analysis
 	GaussPar	SummedAmplitudeFit();	
+	TH1F* 		AeffDistribution();	
+	std::vector<float>*	AeffMeanDistribution(int NSlices, std::vector<float>* AeffMean, std::vector<float>* AeffMeanErr);
 	void		TimeXTALvsXTALAeff();
-	TH1F* 		AeffDistribution();
-	std::vector<float>*	AeffMeanDistribution(int NSlices);
-	std::vector<GaussPar>*	MyFitSlicesY(TH2F* Xtal_Xtal_Time);
+
+	// XTAL vs MCP time analysis	
+	TH1F* 		AmplitudeDistribution(std::string APD);
+	std::vector<float>*	AmplitudeMeanDistribution(std::string APD, int NSlices, std::vector<float>* AmpMean, std::vector<float>* AmpMeanErr);
+	void		TimeXTALvsMCP(std::string APD);
+	void		PulseShape(std::string APD, std::string TimeRef, std::string MagOMin);
+
+	// Plotters
+	std::vector<GaussPar>*	MyFitSlicesY(std::string APD, std::string TimeRef, TH2F* Xtal_Xtal_Time, std::vector<GaussPar>* SliceGaussFit);
+	void		FitTimeResolution(std::string APD, std::string TimeRef);
+	void 		TimeMeanvsAeff(std::string APD, std::string TimeRef);
+	void		SaveAsPngPdfRoot(TObject* ToSave, std::string PathAndName, std::string DrawOpt);
+	void		SaveAsPngPdfRoot(TObject* ToSave, TObject* ToSave1, std::string PathAndName, std::string DrawOpt);
 
 protected:
 	TTree* h4;
@@ -89,9 +115,9 @@ protected:
 	std::map< std::string, PlaneCoord > Center;	
 	std::map< std::string, GaussPar > NoiseAmplitude;
 	GaussPar SummedAmplitude, Default;
-	std::vector< GaussPar > SliceGaussFit;
-	std::vector< float >	SliceAeffMean;
-	std::vector< float >	SliceAeffMeanErr;
+	std::map< std::string, std::vector<GaussPar> >	SliceGaussFit;
+	std::map< std::string, std::vector<float> >	SliceAmpOAeffMean;
+	std::map< std::string, std::vector<float> >	SliceAmpOAeffMeanErr;
 };
 
 #endif 		

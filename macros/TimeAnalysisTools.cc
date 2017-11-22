@@ -640,7 +640,7 @@ GaussPar TimeAnalysisTools::NoiseAmplitudeDistributionFit(TTree* h4Noise, std::s
 {
 	gStyle->SetOptStat();	
 	//cout << "Drawing noise amplitude distribution..." << endl;
-	TH1F* HAmp = new TH1F("HAmp", "", 45, -30, 60);
+	TH1F* HAmp = new TH1F("HAmp", "", 45, -30, 40);
 	if(APD=="C2" || APD=="D3") 	h4Noise->Draw("fit_ampl[C3]>>HAmp");
 	else h4Noise->Draw(("fit_ampl["+APD+"]>>HAmp").c_str());
 	HAmp->GetXaxis()->SetRangeUser(HAmp->GetBinCenter(HAmp->GetMaximumBin())-30, HAmp->GetBinCenter(HAmp->GetMaximumBin())+30);
@@ -680,24 +680,35 @@ GaussPar TimeAnalysisTools::TimeAPDvsMCP(std::string APD, std::string MCP)
 	float Xlast = tD_APD_MCP->GetXaxis()->GetBinCenter(tD_APD_MCP->GetMaximumBin())+1;
 
 	//plot and fit APD_MCP1 time distribution
-	gStyle->SetOptStat();
-	TCanvas* c0 = new TCanvas("c0", "c0");
 	tD_APD_MCP->GetXaxis()->SetRangeUser(Xfirst, Xlast);
-	tD_APD_MCP->GetXaxis()->SetTitle(("time["+APD+"]-time["+MCP+"] (ns)").c_str());
+	tD_APD_MCP->GetXaxis()->SetTitle(("t_{"+APD+"}-t_{"+MCP+"} (ns)").c_str());
+	tD_APD_MCP->GetXaxis()->SetTitleSize(0.055);
+	tD_APD_MCP->GetXaxis()->SetTitleOffset(0.75);
 	tD_APD_MCP->GetYaxis()->SetTitle("events");
+	tD_APD_MCP->GetYaxis()->SetTitleSize(0.055);
+	tD_APD_MCP->GetYaxis()->SetTitleOffset(0.75);
 	tD_APD_MCP->Fit("gaus", "", "", Xfirst, Xlast);
-	tD_APD_MCP->Draw();
 
 	TimeResults[APD].Mean = tD_APD_MCP->GetFunction("gaus")->GetParameter(1);
 	TimeResults[APD].MeanErr = tD_APD_MCP->GetFunction("gaus")->GetParError(1);
 	TimeResults[APD].Sigma = tD_APD_MCP->GetFunction("gaus")->GetParameter(2);
 	TimeResults[APD].SigmaErr = tD_APD_MCP->GetFunction("gaus")->GetParError(2);
 	
+	gStyle->SetOptStat();
+	gStyle->SetOptFit();
+	TCanvas* c0 = new TCanvas("c0", "c0");
+	tD_APD_MCP->Draw();
 	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-"+MCP+"_"+RunStats+".png").c_str());
 	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-"+MCP+"_"+RunStats+".pdf").c_str());
 
+	TFile* f = TFile::Open(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-"+MCP+"_"+RunStats+".root").c_str(), "RECREATE");
+	tD_APD_MCP->Write();
+	f->Write();
+	f->Close();
+
 	c0->~TCanvas();
 	tD_APD_MCP->~TH1F();
+	f->~TFile();
 
 	return TimeResults[APD];
 }
@@ -868,24 +879,36 @@ GaussPar TimeAnalysisTools::TimeAPDvsMCPMean(std::string APD)
 	float Xlast = tD_APD_MCP_Mean->GetXaxis()->GetBinCenter(tD_APD_MCP_Mean->GetMaximumBin())+1;
 
 	//plot and fit APD_MCP1 time distribution
-	gStyle->SetOptStat();
-	TCanvas* c0 = new TCanvas("c0", "c0");
+
 	tD_APD_MCP_Mean->GetXaxis()->SetRangeUser(Xfirst, Xlast);
-	tD_APD_MCP_Mean->GetXaxis()->SetTitle(("time["+APD+"]-MeanTimeMCP (ns)").c_str());
+	tD_APD_MCP_Mean->GetXaxis()->SetTitle(("t_{"+APD+"}-t_{MCPmean} (ns)").c_str());
+	tD_APD_MCP_Mean->GetXaxis()->SetTitleSize(0.055);
+	tD_APD_MCP_Mean->GetXaxis()->SetTitleOffset(0.75);
 	tD_APD_MCP_Mean->GetYaxis()->SetTitle("events");
+	tD_APD_MCP_Mean->GetYaxis()->SetTitleSize(0.055);
+	tD_APD_MCP_Mean->GetYaxis()->SetTitleOffset(0.75);
 	tD_APD_MCP_Mean->Fit("gaus", "", "", Xfirst, Xlast);
-	tD_APD_MCP_Mean->Draw();
 
 	TimeResults[APD].Mean = tD_APD_MCP_Mean->GetFunction("gaus")->GetParameter(1);
 	TimeResults[APD].MeanErr = tD_APD_MCP_Mean->GetFunction("gaus")->GetParError(1);
 	TimeResults[APD].Sigma = tD_APD_MCP_Mean->GetFunction("gaus")->GetParameter(2);
 	TimeResults[APD].SigmaErr = tD_APD_MCP_Mean->GetFunction("gaus")->GetParError(2);
-	
+
+	gStyle->SetOptStat();
+	gStyle->SetOptFit();
+	TCanvas* c0 = new TCanvas("c0", "c0");	
+	tD_APD_MCP_Mean->Draw();
 	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-MCP_Mean_"+RunStats+".png").c_str());
 	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-MCP_Mean_"+RunStats+".pdf").c_str());
 
+	TFile* f = TFile::Open(("/afs/cern.ch/user/c/cquarant/www/fitTimeDist/FinalTimeDistribution/Time_"+APD+"-MCP_MEan_"+RunStats+".root").c_str(), "RECREATE");
+	tD_APD_MCP_Mean->Write();
+	f->Write();
+	f->Close();
+
 	c0->~TCanvas();
 	tD_APD_MCP_Mean->~TH1F();
+	f->~TFile();
 
 	return TimeResults[APD];
 }
@@ -1212,18 +1235,16 @@ void TimeAnalysisTools::ComputeAvsNoiseEdge(std::string APD1, std::string APD2)
 	Aeff->~TH1F();
 }
 
-void TimeAnalysisTools::DrawFreqSpec(std::string APD, std::string MCP)
+void TimeAnalysisTools::DrawFreqSpec(std::string APD)
 {
-	SetSelections();
-	TFile* f = TFile::Open(("FourierSpectra/FS_"+APD+"_MCP1_"+RunStats+".root").c_str(), "RECREATE");
 	gStyle->SetOptStat(0);
 	
-	TProfile* FS = new TProfile(("FS_"+APD+"_"+MCP+"_"+RunStats).c_str(), "", 512, 0, 512);
-	std::string FS_APD_MCP_Sel = DeviceSelections[APD] + " && " + DeviceSelections[MCP] + " && ch=="+APD;
+	TProfile* FS = new TProfile( "FS_Signal", "", 512, 0, 512);
+	std::string FS_APD_MCP_Sel = DeviceSelections[APD] + " && " + DeviceSelections["MCP1"] + " && ch=="+APD;
 	
 	//Good event's signal frequency spectrum
 	cout << "DRAWING..." << endl;
-	h4->Draw(("ampl:freq>>FS_"+APD+"_"+MCP+"_"+RunStats).c_str(), FS_APD_MCP_Sel.c_str()); 
+	h4->Draw("ampl:freq>>FS_Signal", FS_APD_MCP_Sel.c_str()); 
 	
 	FS->GetXaxis()->SetTitle("Frequency");
 	FS->GetYaxis()->SetTitle("Amplitude");
@@ -1246,40 +1267,163 @@ void TimeAnalysisTools::DrawFreqSpec(std::string APD, std::string MCP)
 
 	TFile* fNoise = TFile::Open(NoiseNtuple.c_str());
 	TTree* h4Noise = (TTree*)fNoise->Get("h4");
-	TProfile* FSPedestal = new TProfile(("FS_"+APD+"_Pedestal_"+RunStats).c_str(), "", 512, 0, 512);
+	TProfile* FSPedestal = new TProfile("FS_Pedestal", "", 512, 0, 512);
 	FSPedestal->SetMarkerStyle(kFullDotSmall);
 	FSPedestal->SetMarkerColor(kBlue);
 	
 	cout << "DRAWING PEDESTAL..." << endl;
-	h4Noise->Draw(("ampl:freq>>FS_"+APD+"_Pedestal_"+RunStats).c_str(), ("ch=="+APD).c_str());
+	h4Noise->Draw("ampl:freq>>FS_Pedestal", ("ch=="+APD).c_str());
 	
-		
+	//---Ratio plot
+	TProfile* Ratio = new TProfile();
+	Ratio = (TProfile*)FS->Clone();	
+	Ratio->SetName("Ratio");
+	Ratio->Divide(FSPedestal);
+
+	Ratio->GetXaxis()->SetRangeUser(0, 40);
+	Ratio->GetXaxis()->SetTitle("Frequency");
+	Ratio->GetXaxis()->SetTitleSize(0.055);
+	Ratio->GetXaxis()->SetTitleOffset(0.75);
+
+	//Ratio->GetYaxis()->SetRangeUser(0.9, 1.1);
+	Ratio->GetYaxis()->SetTitle("A_{signal}/A_{pedestal}");
+	Ratio->GetYaxis()->SetTitleSize(0.055);
+	Ratio->GetYaxis()->SetTitleOffset(0.75);
+
 	TLegend* legend = new TLegend(0.52, 0.7, 0.9, 0.9);
 	legend->SetHeader("Signal Frequency Spectrum");
 	legend->AddEntry(FS, "Physics run", "p");
 	legend->AddEntry(FSPedestal, "Pedestal run", "p");
 
 	TCanvas* c0 = new TCanvas("c0", "c0");
-	c0->SetLogy();
-	
-	c0->cd();
+	TPad *cUp  = new TPad("pad_0","pad_0",0.00,0.5,1.00,1.00);
+	TPad *cDown = new TPad("pad_1","pad_1",0.00,0.00,1.00,0.5);
+	cUp->SetBottomMargin(0.01); 	
+    	cUp->Draw();
+	cDown->SetTopMargin(0.01);
+	cDown->Draw();
 
+	cUp->cd();	
+	cUp->SetLogy();
 	FS->Draw();
 	FSPedestal->Draw("SAME");
 	legend->Draw("SAME");
 	
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/FS_"+APD+"_"+MCP+"_"+RunStats+".png").c_str());
-	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/FS_"+APD+"_"+MCP+"_"+RunStats+".pdf").c_str());
+	cDown->cd();
+	Ratio->Draw("hist p");
+
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+APD+"/FS_"+RunStats+".png").c_str());
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+APD+"/FS_"+RunStats+".pdf").c_str());
+
+	TFile* f = TFile::Open(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+APD+"/FS_"+RunStats+".root").c_str(), "RECREATE");
+	f->cd();
+	FS->Write();
+	FSPedestal->Write();
+	Ratio->Write();
+	c0->Write();
+
+	f->Write();
+	f->Close();
 
 	c0->~TCanvas();
 	FS->~TProfile();
-
-	f->cd();
-	FS->Write();
-	f->Write();
-	f->Close();
 	f->~TFile();
 }
+
+void TimeAnalysisTools::DrawFreqSpecMCP(std::string MCP)
+{
+	gStyle->SetOptStat(0);
+	
+	TProfile* FS = new TProfile("FS_Signal", "", 512, 0, 512);
+	std::string FS_MCP_Sel = DeviceSelections[MCP] + " && ch=="+MCP;
+	
+	//Good event's signal frequency spectrum
+	cout << "DRAWING..." << endl;
+	h4->Draw("ampl:freq>>FS_Signal", FS_MCP_Sel.c_str()); 
+	
+	FS->GetXaxis()->SetTitle("Frequency");
+	FS->GetYaxis()->SetTitle("Amplitude");
+	FS->SetMarkerStyle(kFullDotSmall);
+	FS->SetMarkerColor(kRed);
+
+	cout << "DRAWING PEDESTAL..." << endl;
+
+	/*
+	std::string NoiseNtuple = "/eos/cms/store/user/meridian/ECALTBH4/cquarant/H42016_MBbot_Pedestal_5892.root";
+	TFile* fNoise = TFile::Open(NoiseNtuple.c_str());
+	TTree* h4Noise = (TTree*)fNoise->Get("h4");
+	*/
+	
+	TFile* fNoise;
+
+	if(Gain == "50") fNoise = TFile::Open("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/C3/FS_20Gev_G50_5786.root");
+	else if(Gain == "100") fNoise = TFile::Open("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/C3/FS_20Gev_G100_5785.root");
+	else fNoise = TFile::Open("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/C0APD1/FS_100Gev_G200_5782.root");
+	
+ 	
+
+	TProfile* FSPedestal =(TProfile*)fNoise->Get("FS_Pedestal");
+	FSPedestal->SetMarkerStyle(kFullDotSmall);
+	FSPedestal->SetMarkerColor(kBlue);
+	
+	
+	//h4Noise->Draw(("ampl:freq>>FS_"+MCP+"_Pedestal_"+RunStats).c_str(), "ch == C3");
+	
+	//---Ratio plot
+	TProfile* Ratio = new TProfile();
+	Ratio = (TProfile*)FS->Clone();	
+	Ratio->SetName("Ratio");
+	Ratio->Divide(FSPedestal);
+
+	Ratio->GetXaxis()->SetRangeUser(0, 160);
+	Ratio->GetXaxis()->SetTitle("Frequency");
+	Ratio->GetXaxis()->SetTitleSize(0.055);
+	Ratio->GetXaxis()->SetTitleOffset(0.75);
+
+	//Ratio->GetYaxis()->SetRangeUser(0.9, 1.1);
+	Ratio->GetYaxis()->SetTitle("A_{signal}/A_{pedestal}");
+	Ratio->GetYaxis()->SetTitleSize(0.055);
+	Ratio->GetYaxis()->SetTitleOffset(0.75);
+
+	TLegend* legend = new TLegend(0.52, 0.7, 0.9, 0.9);
+	legend->SetHeader("Signal Frequency Spectrum");
+	legend->AddEntry(FS, "Physics run", "p");
+	legend->AddEntry(FSPedestal, "Pedestal run", "p");
+
+	TCanvas* c0 = new TCanvas("c0", "c0");
+	TPad *cUp  = new TPad("pad_0","pad_0",0.00,0.5,1.00,1.00);
+	TPad *cDown = new TPad("pad_1","pad_1",0.00,0.00,1.00,0.5);
+	cUp->SetBottomMargin(0.01); 	
+    	cUp->Draw();
+	cDown->SetTopMargin(0.01);
+	cDown->Draw();
+
+	cUp->cd();	
+	cUp->SetLogy();
+	FS->Draw();
+	FSPedestal->Draw("SAME");
+	legend->Draw("SAME");
+	
+	cDown->cd();
+	Ratio->Draw("hist p");
+
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+MCP+"/FS_"+RunStats+".png").c_str());
+	c0->SaveAs(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+MCP+"/FS_"+RunStats+".pdf").c_str());
+
+	TFile* f = TFile::Open(("/afs/cern.ch/user/c/cquarant/www/FourierSpectra/"+MCP+"/FS_"+RunStats+".root").c_str(), "RECREATE");
+	f->cd();
+	FS->Write();
+	FSPedestal->Write();
+	Ratio->Write();
+	c0->Write();
+	f->Write();
+	f->Close();
+
+	c0->~TCanvas();
+	FS->~TProfile();
+	f->~TFile();
+}
+
 
 void TimeAnalysisTools::DrawFreqSpecPedestal(std::string APD)
 {

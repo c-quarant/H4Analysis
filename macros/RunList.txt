@@ -1,3 +1,11 @@
+///////// FOR NEXT RUN ////////////
+C0	Ch.22-23 (eccetto 5824-5825)
+C2	Ch.24
+C3	Ch.18
+C4	Ch.19
+MCP1	Ch.16
+MCP1	Ch.17
+
 ///// C3 G50 ///////
 5777 100 Gev
 5786  20 Gev
@@ -29,7 +37,7 @@ pedestal: 5902
 5781 100 Gev
 5788  20 Gev
 5797  50 Gev
-5824  50 Gev
+5824  50 Gev (Ch. 21-22)
 5901 150 Gev
 5886 200 Gev
 pedestal: 5900
@@ -37,7 +45,7 @@ pedestal: 5900
 ////// C0 G200 ///////
 5782 100 Gev
 5787  20 Gev
-5825  50 Gev
+5825  50 Gev (Ch. 21-22)
 5899 150 Gev
 5887 200 Gev
 pedestal: 5898
@@ -46,8 +54,14 @@ pedestal: 5898
 5909 150 Gev
 
 ////// D3 G50 ///////
+5244 100 Gev (ch20)
 5911 150 Gev
 
+////// C2 G50 ///////
+5915 150 Gev
+5907 150 Gev
+5924 150 Gev
+5930 150 Gev
 
 ///PER I RUN SEGUENTI////
 C2 = Ch17
@@ -56,6 +70,23 @@ C4 = Ch19
 D3 = Ch20
 MCP = Ch16
 
+////// C2 G50 ///////
+5575 20  Gev (different Mb Voltage and maybe Temperature)
+5608 50  Gev
+5617 100 Gev
+5637 150 Gev
+5647 150 Gev
+5625 200 Gev
+5627 200 Gev
+5628 200 Gev
+
+////// C3_centro G50 ////
+5602 50 Gev
+5612 100 Gev
+5613 100 Gev
+5633 150 Gev
+5643 150 Gev
+5620 200 Gev
 
 ////// C3_N(C2) G50 /////
 5603 50 Gev
@@ -81,7 +112,6 @@ MCP = Ch16
 5605 50 Gev 24k
 5606 50 Gev 5k
 5615 100 Gev 
-
 
 
 ///// pedestals /////

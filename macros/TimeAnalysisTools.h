@@ -71,7 +71,8 @@ public:
 	void 		AmplitudeMaps(std::string APD);
 	void 		AmplitudeMapsEdge(std::string APD, std::string edge);
 	void		TimeMaps(std::string APD, std::string MCP);
-	void		DrawFreqSpec(std::string APD, std::string MCP);
+	void		DrawFreqSpec(std::string APD);
+	void		DrawFreqSpecMCP(std::string MCP);
 	void		DrawFreqSpecPedestal(std::string APD);
 	float 		MeanTimeMCP(std::string MCP);
 	GaussPar 	AmplitudeDistributionFit2Gaus(std::string APD);

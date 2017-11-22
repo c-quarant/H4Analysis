@@ -64,12 +64,12 @@ void FourierAnalysis(std::string NtupleList, int bound)
 			Gain = stoi(RunTimeAnalyzer->Gain);
 			Energy = stoi(RunTimeAnalyzer->Energy);
 
-			bool FileNotExists;
 			for(auto& APD : RunAPDList)
-			{
-				FileNotExists = gSystem->AccessPathName(("FourierSpectra/FS_"+APD+"_MCP1_"+RunTimeAnalyzer->RunStats+".root").c_str());
-				if(FileNotExists) RunTimeAnalyzer->DrawFreqSpec(APD, "MCP1");
-			}	
+				RunTimeAnalyzer->DrawFreqSpec(APD);
+
+			for(auto& MCP : RunMCPList)
+				RunTimeAnalyzer->DrawFreqSpecMCP(MCP);
+	
 			RunTimeAnalyzer->~TimeAnalysisTools();
 		}
 	}

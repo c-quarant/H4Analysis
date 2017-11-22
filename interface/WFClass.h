@@ -35,6 +35,7 @@ struct WFFitResults
     double ampl;
     double time;
     double chi2;
+    int    fitStatus_;
 };      
 
 class WFClass : public TObject
@@ -48,6 +49,7 @@ public:
 
     //---getters---
     inline const vector<double>* GetSamples() {return &samples_;};
+    inline const vector<double>* GetNoiseFiltSamples() {return &noiseFiltSamples_;};
     inline float           GetBaseline() {return baseline_;}
     inline int             GetNSample() {return samples_.size();};
     inline float           GetTUnit() {return tUnit_;};
@@ -67,8 +69,9 @@ public:
     //---utils---
     void                   Reset();
     void                   AddSample(float sample) {samples_.push_back(polarity_*sample);};
+    void                   AddFiltSample(float sample) {noiseFiltSamples_.push_back(polarity_*sample);};
     WFBaseline             SubtractBaseline(int min=-1, int max=-1);
-    WFFitResults           TemplateFit(float offset=0., int lW=0, int hW=0);
+    WFFitResults           TemplateFit(bool NoiseCut, float offset=0., int lW=0, int hW=0);//---if NoiseCut==1 use noise filtered samples
     void                   EmulatedWF(WFClass& wf, float rms, float amplitude, float time);
     void                   FFT(WFClass& wf, float tau, int cut);
     void                   Print();
@@ -83,10 +86,11 @@ protected:
     //---utils---
     float                 BaselineRMS();
     float                 LinearInterpolation(float& A, float& B, const int& min, const int& max);
-    double                TemplateChi2(const double* par=NULL);
+    double                TemplateChi2(const double* par=NULL);//---if NoiseCut==1 use noise filtered samples
     
 protected:
     vector<double> samples_;
+    vector<double> noiseFiltSamples_;
     float          tUnit_;
     int            polarity_;
     float          trigRef_;
@@ -116,6 +120,8 @@ protected:
     int            fWinMax_;
     float          tempFitTime_;
     float          tempFitAmp_;
+    int            fStatus_;
+    bool	   NoiseCut_;
     ROOT::Math::Interpolator* interpolator_;
 };
 

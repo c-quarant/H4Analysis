@@ -359,16 +359,21 @@ WFBaseline WFClass::SubtractBaseline(int min, int max)
 }
 
 //----------template fit to the WF--------------------------------------------------------
-WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
+WFFitResults WFClass::TemplateFit(bool NoiseCut, float offset, int lW, int hW)
 {
     if(tempFitAmp_ == -1)
     {
 	tempFitTime_ = -999;
         //---set template fit window around maximum, [min, max)
         BaselineRMS();
-        GetAmpMax();    
+	//cout << "NoiseCut " << NoiseCut << "Size " << samples_.size() << endl;
+	NoiseCut_ = NoiseCut;
+	GetAmpMax();
+	
         fWinMin_ = maxSample_ + int(offset/tUnit_) - lW;
         fWinMax_ = maxSample_ + int(offset/tUnit_) + hW;
+
+	//cout << maxSample_ << endl;
 	//if(maxSample_<50 || maxSample_>300)cout << "MaxInd " << maxSample_ << "MaxVal  " << samples_[maxSample_] << "    SBALLATO!" << endl;
 	//cout << "maXSample   " << maxSample_ << "   min  " << fWinMin_ << "    max   " << fWinMax_ << endl;
 	//cout << "TmaXSample" << maxSample_*tUnit_ << "Tmin  " << fWinMin_*tUnit_ << "    Tmax   " << fWinMax_*tUnit_ << endl;
@@ -480,7 +485,7 @@ void WFClass::FFT(WFClass& wf, float tau, int cut)
 
 	//cout << polarity_ << "\t\t" << endl;
     for(int i=0;i<n ;i++)
-        wf.AddSample(polarity_*inv_re[i]/n);
+        wf.AddFiltSample(polarity_*inv_re[i]/n);
 
     delete vinvfft;
     delete vfft;
@@ -555,9 +560,16 @@ double WFClass::TemplateChi2(const double* par)
 {
     double chi2 = 0;
     double delta = 0;
+
+    std::vector<double> tempSamples_;
+    if(NoiseCut_)
+      tempSamples_ = samples_;
+    else
+      tempSamples_ = noiseFiltSamples_;
+
     for(int iSample=fWinMin_; iSample<fWinMax_; ++iSample)
     {
-        if(iSample < 0 || iSample >= samples_.size())
+        if(iSample < 0 || iSample >= tempSamples_.size())
         {
             //cout << ">>>WARNING: template fit out of samples rage (chi2 set to -1)" << endl;
             chi2 += 9999;
@@ -567,11 +579,11 @@ double WFClass::TemplateChi2(const double* par)
             //---fit: par[0]*ref_shape(t-par[1]) par[0]=amplitude, par[1]=DeltaT
             //---if not fitting return chi2 value of best fit
             if(par){
-                delta = (samples_[iSample] - par[0]*interpolator_->Eval(iSample*tUnit_-par[1]))/bRMS_;
+                delta = (tempSamples_[iSample] - par[0]*interpolator_->Eval(iSample*tUnit_-par[1]))/bRMS_;
 		//cout << iSample*tUnit_ << endl;
 		}
             else
-                delta = (samples_[iSample] - tempFitAmp_*interpolator_->Eval(iSample*tUnit_-tempFitTime_))/bRMS_;
+                delta = (tempSamples_[iSample] - tempFitAmp_*interpolator_->Eval(iSample*tUnit_-tempFitTime_))/bRMS_;
             chi2 += delta*delta;
         }
 	//cout << chi2 << endl;

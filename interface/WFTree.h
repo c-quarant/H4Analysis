@@ -36,6 +36,8 @@ public:
     int*    WF_ch; 
     float*  WF_time;
     float*  WF_val;
+    float*  WF_val_noiseCut;
 };
+
 
 #endif

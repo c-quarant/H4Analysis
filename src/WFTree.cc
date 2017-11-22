@@ -15,6 +15,7 @@ void WFTree::Init()
     WF_ch = new int[WF_samples];
     WF_time = new float[WF_samples];
     WF_val = new float[WF_samples];
+    WF_val_noiseCut = new float[WF_samples];
     //---global branches
     string size_var = "WF_samples"+suffix_;
     tree_->Branch("index", index,"index/l");
@@ -23,5 +24,6 @@ void WFTree::Init()
     tree_->Branch(("WF_ch"+suffix_).c_str(), WF_ch, ("WF_ch"+suffix_+"["+size_var+"]/I").c_str());
     tree_->Branch(("WF_time"+suffix_).c_str(), WF_time, ("WF_time"+suffix_+"["+size_var+"]/F").c_str());
     tree_->Branch(("WF_val"+suffix_).c_str(), WF_val, ("WF_val"+suffix_+"["+size_var+"]/F").c_str());
+    tree_->Branch(("WF_val_noiseCut"+suffix_).c_str(), WF_val_noiseCut, ("WF_val_noiseCut"+suffix_+"["+size_var+"]/F").c_str());
 }
 

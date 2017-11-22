@@ -22,15 +22,20 @@ bool WFAnalyzer::Begin(CfgManager& opts, uint64* index)
         for(auto& tag : opts.GetOpt<vector<string> >(instanceName_+".templateTags"))
             for(auto& run : opts.GetOpt<vector<string> >(tag+".runList"))
                 if(run == opts.GetOpt<string>("h4reco.run"))
-                    templateTag = tag;
+                   templateTag = tag;
 
     for(auto& channel : channelsNames_)
     {        
         if(opts.OptExist(channel+".templateFit.file"))
         {            
             TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
-            TH1* wfTemplate=(TH1*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
+	    cout << "channel:     " << channel+".templateFit.file" << endl;
+	    cout << "templateFile:    " << opts.GetOpt<string>(channel+".templateFit.file", 0).c_str() << endl;
+	    cout << "templateHisto:   " << (opts.GetOpt<string>(channel+".templateFit.file", 1)+"_"+templateTag).c_str() << endl;
+
+            TH1D* wfTemplate=(TH1D*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
                                                      +"_"+templateTag).c_str());
+
 	    templates_[channel] = (TH1F*) wfTemplate->Clone();
 	    templates_[channel] -> SetDirectory(0);
             templateFile->Close();
@@ -137,17 +142,26 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         }
         
         //---template fit (only specified channels)
-        WFFitResults fitResults{-1, -1000, -1};
+        WFFitResults fitResults{-1, -1000, -1, -1};
         if(opts.OptExist(channel+".templateFit.file"))
         {
             WFs_[channel]->SetTemplate(templates_[channel]);
+	 
             fitResults = WFs_[channel]->TemplateFit(opts.GetOpt<float>(channel+".templateFit.fitWin", 0),
                                                    opts.GetOpt<int>(channel+".templateFit.fitWin", 1),
                                                    opts.GetOpt<int>(channel+".templateFit.fitWin", 2));
             digiTree_.fit_ampl[outCh] = fitResults.ampl;
             digiTree_.fit_time[outCh] = fitResults.time;
             digiTree_.fit_chi2[outCh] = fitResults.chi2;
+	    digiTree_.fit_status[outCh] = fitResults.fitStatus_;
         }            
+	
+	//---noise subtraction with Fourier Analuysis
+	if(opts.OptExist(channel+".noiseSubtraction.tau"))
+	{
+		WFs_[channel]->FFT(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.tau"), opts.GetOpt<int>(channel+".noiseSubtraction.cut"));
+	}
+
 	//---calibration constant for each channel if needed
 	if(opts.OptExist(channel+".calibration.calibrationConst"))
 	  digiTree_.calibration[outCh]=opts.GetOpt<float>(channel+".calibration.calibrationConst");
@@ -157,26 +171,39 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         //---WFs---
         if(fillWFtree)
         {
-            auto analizedWF = WFs_[channel]->GetSamples();
-            int nSamples = analizedWF->size();
-            float tUnit = WFs_[channel]->GetTUnit();
-            for(int jSample=0; jSample<analizedWF->size(); ++jSample)
+	  int nSamples;
+	  auto analizedWF = WFs_[channel]->GetSamples();
+	  if(opts.OptExist(channel+".noiseSubtraction.tau"))          
+	    nSamples = analizedWF->size()*0.5;
+	  else
+	    nSamples = analizedWF->size();
+	  float tUnit = WFs_[channel]->GetTUnit();
+	  for(int jSample=0; jSample<nSamples; ++jSample)
             {
-                outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
-                outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
-                outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
-            }
-        }
-        //---increase output tree channel counter
+	      outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
+	      outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
+	      outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
+	    }
+
+	  if(opts.OptExist(channel+".noiseSubtraction.tau"))
+	    {
+	      for(int jSample=0; jSample<nSamples; ++jSample)
+	         outWFTree_.WF_val_noiseCut[jSample+outCh*nSamples] = analizedWF->at(jSample+nSamples);
+	    }       
+	}
+	
+	//---increase output tree channel counter
         ++outCh;
     }
-
+    
     //---fill the output trees 
     //---reco var
     digiTree_.Fill();
     //---WFs
     if(fillWFtree)
+    {
         outWFTree_.Fill();
+    }
 
     return true;
 }

@@ -295,6 +295,7 @@ void WFClass::SetTemplate(TH1* templateWF)
         y.push_back(templateWF->GetBinContent(iBin));
     }
     interpolator_->SetData(x, y);
+    cout << "INTERPOLATOR RESULT X=33.9   " << interpolator_->Eval(33.9) << endl;
 
 
 
@@ -371,7 +372,8 @@ WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
 	//if(maxSample_<50 || maxSample_>300)cout << "MaxInd " << maxSample_ << "MaxVal  " << samples_[maxSample_] << "    SBALLATO!" << endl;
 	//cout << "maXSample   " << maxSample_ << "   min  " << fWinMin_ << "    max   " << fWinMax_ << endl;
 	//cout << "TmaXSample" << maxSample_*tUnit_ << "Tmin  " << fWinMin_*tUnit_ << "    Tmax   " << fWinMax_*tUnit_ << endl;
-
+	
+	
 	//---setup minimization
         ROOT::Math::Functor chi2(this, &WFClass::TemplateChi2, 2);
         ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad");
@@ -380,14 +382,22 @@ WFFitResults WFClass::TemplateFit(float offset, int lW, int hW)
         minimizer->SetTolerance(1e-3);
         minimizer->SetPrintLevel(0);
         minimizer->SetFunction(chi2);
-        minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-2, 0, 4000.);
-        minimizer->SetLimitedVariable(1, "deltaT", maxSample_*tUnit_, 1e-2, 100*tUnit_-0.2, 100*tUnit_+0.2);
+	
+        minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-2, 0., 4000.);
+        minimizer->SetLimitedVariable(1, "deltaT", maxSample_*tUnit_, 1e-2, maxSample_*tUnit_-15, maxSample_*tUnit_+15);
+	/*
+	//---setup for pedestal runs
+        minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-2, -2000., 2000.);
+        minimizer->SetLimitedVariable(1, "deltaT", 50*tUnit_, 1e-2, maxSample_*tUnit_-0.2, maxSample_*tUnit_+0.2);
+	*/
+
 	//cout << -1024G.*tUnit_ << "        " << 1024.*tUnit_ << endl;
-        //---fit
-        minimizer->Minimize();
+        
+	//---fit
+	minimizer->Minimize();
         tempFitAmp_ = minimizer->X()[0];
 	//cout << "tempFitAmp_  " << tempFitAmp_ << endl;
-        tempFitTime_ = minimizer->X()[1];
+       	tempFitTime_ = minimizer->X()[1];
 	fStatus_ = minimizer->Status();
 
         delete minimizer;        
@@ -425,9 +435,10 @@ void WFClass::FFT(WFClass& wf, float tau, int cut)
         return;
     }
 
-    wf.Reset();
+    //wf.Reset();
 
     int n=samples_.size();
+	//cout << "n samples_ " << n << endl;
     TVirtualFFT *vfft = TVirtualFFT::FFT(1,&n,"C2CFORWARD");
 
     Double_t orig_re[n],orig_im[n];
@@ -436,8 +447,10 @@ void WFClass::FFT(WFClass& wf, float tau, int cut)
         orig_re[i]=samples_[i];
         if(i>1000) orig_re[i]=orig_re[999];// DIGI CAENV1742 NOT USABLE
         orig_im[i]=0;
+	//cout << orig_re[i] << "\t" << orig_im[i] << endl;
     }
     vfft->SetPointsComplex(orig_re,orig_im);
+	//cout << "mark 1" << endl;
     vfft->Transform();
     Double_t re[n],im[n];
     vfft->GetPointsComplex(re,im);
@@ -460,12 +473,14 @@ void WFClass::FFT(WFClass& wf, float tau, int cut)
     }
 
     vinvfft->SetPointsComplex(cut_re,cut_im);
+	//cout << "mark 2" << endl;
     vinvfft->Transform();
     Double_t inv_re[n],inv_im[n];
     vinvfft->GetPointsComplex(inv_re,inv_im);
 
+	//cout << polarity_ << "\t\t" << endl;
     for(int i=0;i<n ;i++)
-        wf.AddSample(inv_re[i]/n);
+        wf.AddSample(polarity_*inv_re[i]/n);
 
     delete vinvfft;
     delete vfft;

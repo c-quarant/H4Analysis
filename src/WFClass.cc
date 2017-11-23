@@ -330,6 +330,8 @@ void WFClass::Reset()
     tempFitAmp_ = -1;
     fStatus_ = -1;
     samples_.clear();
+    noiseFiltSamples_.clear();
+    chi2samples_.clear();
 } 
 
 //---------estimate the baseline in a given range and then subtract it from the signal----
@@ -367,9 +369,15 @@ WFFitResults WFClass::TemplateFit(bool NoiseCut, float offset, int lW, int hW)
         //---set template fit window around maximum, [min, max)
         BaselineRMS();
 	//cout << "NoiseCut " << NoiseCut << "Size " << samples_.size() << endl;
-	NoiseCut_ = NoiseCut;
+
 	GetAmpMax();
-	
+
+	if(NoiseCut)
+	  chi2samples_ = noiseFiltSamples_;
+	else
+	  chi2samples_ = samples_;
+
+	//cout << "noiseCut " << noiseFiltSamples_.at(maxSample_) << "  origin " << samples_.at(maxSample_) << "  chi2 " << chi2samples_.at(maxSample_) << endl;
         fWinMin_ = maxSample_ + int(offset/tUnit_) - lW;
         fWinMax_ = maxSample_ + int(offset/tUnit_) + hW;
 
@@ -388,8 +396,8 @@ WFFitResults WFClass::TemplateFit(bool NoiseCut, float offset, int lW, int hW)
         minimizer->SetPrintLevel(0);
         minimizer->SetFunction(chi2);
 	
-        minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-2, 0., 4000.);
-        minimizer->SetLimitedVariable(1, "deltaT", maxSample_*tUnit_, 1e-2, maxSample_*tUnit_-15, maxSample_*tUnit_+15);
+        minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-3, 0., 4000.);
+        minimizer->SetLimitedVariable(1, "deltaT", maxSample_*tUnit_, 1e-3, maxSample_*tUnit_-15, maxSample_*tUnit_+15);
 	/*
 	//---setup for pedestal runs
         minimizer->SetLimitedVariable(0, "amplitude", GetAmpMax(), 1e-2, -2000., 2000.);
@@ -561,15 +569,9 @@ double WFClass::TemplateChi2(const double* par)
     double chi2 = 0;
     double delta = 0;
 
-    std::vector<double> tempSamples_;
-    if(NoiseCut_)
-      tempSamples_ = samples_;
-    else
-      tempSamples_ = noiseFiltSamples_;
-
     for(int iSample=fWinMin_; iSample<fWinMax_; ++iSample)
     {
-        if(iSample < 0 || iSample >= tempSamples_.size())
+        if(iSample < 0 || iSample >= chi2samples_.size())
         {
             //cout << ">>>WARNING: template fit out of samples rage (chi2 set to -1)" << endl;
             chi2 += 9999;
@@ -579,11 +581,11 @@ double WFClass::TemplateChi2(const double* par)
             //---fit: par[0]*ref_shape(t-par[1]) par[0]=amplitude, par[1]=DeltaT
             //---if not fitting return chi2 value of best fit
             if(par){
-                delta = (tempSamples_[iSample] - par[0]*interpolator_->Eval(iSample*tUnit_-par[1]))/bRMS_;
+                delta = (chi2samples_[iSample] - par[0]*interpolator_->Eval(iSample*tUnit_-par[1]))/bRMS_;
 		//cout << iSample*tUnit_ << endl;
 		}
             else
-                delta = (tempSamples_[iSample] - tempFitAmp_*interpolator_->Eval(iSample*tUnit_-tempFitTime_))/bRMS_;
+                delta = (chi2samples_[iSample] - tempFitAmp_*interpolator_->Eval(iSample*tUnit_-tempFitTime_))/bRMS_;
             chi2 += delta*delta;
         }
 	//cout << chi2 << endl;

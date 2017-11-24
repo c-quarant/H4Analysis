@@ -31,7 +31,6 @@ private:
     map<string, vector<float> > timeOpts_;
     DigiTree                    digiTree_;
     WFTree                      outWFTree_;
-    WFTree                      outWFTreeNoiseSub_;
     map<string, WFClass*>       WFs_;
     map<string, TH1*>           templates_;
 };

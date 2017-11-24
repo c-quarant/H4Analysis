@@ -142,9 +142,12 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         }
 	
 	//---noise subtraction with Fourier Analuysis
-	if(opts.OptExist(channel+".noiseSubtraction.tau"))
+	int i=0;
+	while(opts.OptExist(channel+".noiseSubtraction.order", i))
 	{
-		WFs_[channel]->FFT(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.tau"), opts.GetOpt<int>(channel+".noiseSubtraction.cut"));
+	    //WFs_[channel]->FFT(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.tau"), opts.GetOpt<int>(channel+".noiseSubtraction.cut"));
+	    WFs_[channel]->BWFilter(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.order", i), opts.GetOpt<int>(channel+".noiseSubtraction.wCut", i));
+	    i++;
 	}
       
         //---template fit (only specified channels)
@@ -171,24 +174,23 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         //---WFs---
         if(fillWFtree)
         {
-	  int nSamples;
 	  auto analizedWF = WFs_[channel]->GetSamples();
 	  auto noiseFilteredWF = WFs_[channel]->GetNoiseFiltSamples();
-	  if(opts.OptExist(channel+".noiseSubtraction.tau"))          
-	    nSamples = analizedWF->size()*0.5;
-	  else
-	    nSamples = analizedWF->size();
+	  int  nSamples = analizedWF->size();
+	  //cout << noiseFilteredWF->size() << endl;
 	  float tUnit = WFs_[channel]->GetTUnit();
 
-	  if(opts.OptExist(channel+".noiseSubtraction.tau"))
+	  if(opts.OptExist(channel+".noiseSubtraction.order"))
 	  {
 	      for(int jSample=0; jSample<nSamples; ++jSample)
 	      {
-	         outWFTree_.WF_val_noiseCut[jSample+outCh*nSamples] = analizedWF->at(jSample);
+	         outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
 		 outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
 	         outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
-	         outWFTree_.WF_val[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample);
-              }
+	         outWFTree_.WF_val_noiseCut[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample);
+	         outWFTree_.WF_val_noiseCut2[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample+nSamples);
+	         outWFTree_.WF_val_noiseCut3[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample+2*nSamples);
+	      }
 	  }	  
 	  else
 	  {		 
@@ -210,9 +212,7 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
     digiTree_.Fill();
     //---WFs
     if(fillWFtree)
-    {
         outWFTree_.Fill();
-    }
 
     return true;
 }

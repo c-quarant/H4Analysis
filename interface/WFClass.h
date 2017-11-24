@@ -74,6 +74,7 @@ public:
     WFFitResults           TemplateFit(bool NoiseCut, float offset=0., int lW=0, int hW=0);//---if NoiseCut==1 use noise filtered samples
     void                   EmulatedWF(WFClass& wf, float rms, float amplitude, float time);
     void                   FFT(WFClass& wf, float tau, int cut);
+    void                   BWFilter(WFClass& wf, float tau, int cut);
     void                   Print();
     float                  GetTriggerRef();
     //---operators---
@@ -91,6 +92,7 @@ protected:
 protected:
     vector<double> samples_;
     vector<double> noiseFiltSamples_;
+    vector<double> chi2samples_;
     float          tUnit_;
     int            polarity_;
     float          trigRef_;
@@ -121,7 +123,6 @@ protected:
     float          tempFitTime_;
     float          tempFitAmp_;
     int            fStatus_;
-    bool	   NoiseCut_;
     ROOT::Math::Interpolator* interpolator_;
 };
 

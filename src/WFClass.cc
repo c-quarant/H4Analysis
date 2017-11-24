@@ -501,6 +501,64 @@ void WFClass::FFT(WFClass& wf, float tau, int cut)
     return;
 }
 
+
+void WFClass::BWFilter(WFClass& wf, float order, int wCut)
+{
+    if(samples_.size() == 0)
+    {
+        std::cout << "ERROR: EMPTY WF" << std::endl;
+        return;
+    }
+
+    //wf.Reset();
+
+    int n=samples_.size();
+	//cout << "n samples_ " << n << endl;
+    TVirtualFFT *vfft = TVirtualFFT::FFT(1,&n,"C2CFORWARD");
+
+    Double_t orig_re[n],orig_im[n];
+    for(int i=0;i<n;i++) 
+    {
+        orig_re[i]=samples_[i];
+        if(i>1000) orig_re[i]=orig_re[999];// DIGI CAENV1742 NOT USABLE
+        orig_im[i]=0;
+	//cout << orig_re[i] << "\t" << orig_im[i] << endl;
+    }
+    vfft->SetPointsComplex(orig_re,orig_im);
+	//cout << "mark 1" << endl;
+    vfft->Transform();
+    Double_t re[n],im[n];
+    vfft->GetPointsComplex(re,im);
+
+    TVirtualFFT *vinvfft = TVirtualFFT::FFT(1,&n,"C2CBACKWARD M K");
+    Double_t cut_re[n],cut_im[n];
+
+    for(int i=0;i<n;i++) 
+    {
+	int delta = TMath::Min(i,n-i);
+        double dump = TMath::Sqrt(1./(1+TMath::Power((double)delta/wCut, 2.*order)));
+        cut_im[i]=im[i]*dump;
+        cut_re[i]=re[i]*dump;
+	//cout << wCut << "  " << i << ":   " << cut_im[i] << "   " << dump << "   " << cut_im[i]*dump << endl;
+    }
+
+    vinvfft->SetPointsComplex(cut_re,cut_im);
+	//cout << "mark 2" << endl;
+    vinvfft->Transform();
+    Double_t inv_re[n],inv_im[n];
+    vinvfft->GetPointsComplex(inv_re,inv_im);
+
+	//cout << polarity_ << "\t\t" << endl;
+    for(int i=0;i<n ;i++)
+        wf.AddFiltSample(polarity_*inv_re[i]/n);
+
+    delete vinvfft;
+    delete vfft;
+
+    return;
+}
+
+
 //----------compute baseline RMS (noise)--------------------------------------------------
 float WFClass::BaselineRMS()
 {

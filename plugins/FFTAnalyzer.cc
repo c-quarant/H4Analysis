@@ -32,7 +32,7 @@ bool FFTAnalyzer::Begin(CfgManager& opts, uint64* index)
     }
     nChannels = srcChannels.size();
     //---register shared FFTs
-    //   nSamples is divided by to if FFT is from time to frequency domain
+    //   nSamples is divided by two if FFT is from time to frequency domain
     channelsNames_ = opts.GetOpt<vector<string> >(instanceName_+".channelsNames");
     fftType_ = opts.OptExist(instanceName_+".FFTType") ?
         opts.GetOpt<string>(instanceName_+".FFTType") : "T2F";
@@ -166,7 +166,6 @@ bool FFTAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& pl
                         re_[index] = Re[index];
                         im_[index] = Im[index];
                         amplitudes_[index] = var_map["Ampl"][k];
-			//cout << "Size " << var_map["Ampl"][index] << "  index " << index << endl;
                         phases_[index] = var_map["Phase"][k];
                     }
                 }
@@ -185,7 +184,47 @@ bool FFTAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& pl
             auto Re = fft->GetRe();
             auto Im = fft->GetIm();
             auto fftc2r = TVirtualFFT::FFT(1, &nSamples_, "C2R");
-            fftc2r->SetPointsComplex(Re->data(), Im->data());
+	   
+	    //---subtract FFT of noise from template before going back to time domain
+            if(opts.OptExist(instanceName_+".subtractFFTNoise"))
+	    {
+		double noiseRe=0,noiseIm=0,newRe=0, newIm=0;
+		for(int i=0;i<nSamples_/2;++i)
+		{
+		    noiseRe = noiseTemplateHistoRe_->GetBinContent(i);
+		    newRe = *(Re->data()+i) - noiseRe; 
+		    noiseIm = noiseTemplateHistoIm_->GetBinContent(i);
+		    newIm = *(Im->data()+i) - noiseIm; 
+		    fftc2r->SetPoint(i,newRe,newIm);
+	            //std::cout<<i<<" "<< *(Re->data()+i)<<" "<<noiseRe<<" "<<newRe<<std::endl;
+	        }
+	    }
+	    //---Apply a cut on frequency domain 
+	    else if(opts.OptExist(instanceName_+".frequencyCut"))
+	    {
+		for(int i=0;i<nSamples_/2;++i)
+		{
+		    if(i<opts.GetOpt<float>(instanceName_+".frequencyCut"))
+			fftc2r->SetPoint(i,*(Re->data()+i),*(Im->data()+i));
+ 		    else
+			fftc2r->SetPoint(i,0,0);
+		}
+	    }
+	    //---apply a Butterworth filter
+	    else if(opts.OptExist(instanceName_+".ButterworthFilter"))
+	    {
+		int order = opts.GetOpt<int>(channel+".BWFilter.order", opts.GetOpt<int>(instanceName_+".ButterworthFilter"));
+		float wCut = opts.GetOpt<float>(channel+".BWFilter.wCut", opts.GetOpt<float>(instanceName_+".ButterworthFilter"));
+		float dump;
+		for(int iSample=0; iSample<nSamples_; iSample++)
+		{
+		    dump = TMath::Sqrt(1./(1.+TMath::Power((double)iSample/wCut, 2*order))); 
+		    fftc2r->SetPoint(iSample, *(Re->data()+iSample)*dump, *(Im->data()+iSample)*dump);
+		}
+	    }
+	    else
+	        fftc2r->SetPointsComplex(Re->data(), Im->data());
+	  
             fftc2r->Transform();
             fftc2r->GetPoints(data);
 

@@ -48,7 +48,10 @@ private:
     map<string, TH2F*>        templates2dHistos_;
     map<string, FFTClass*>    FFTs_;
     map<string, WFClass*>     WFs_;
-    TTree*                    fftTree_;         
+    TTree*                    fftTree_; 
+    TFile* noiseTemplateFile_;
+    TH1F* noiseTemplateHistoRe_;
+    TH1F* noiseTemplateHistoIm_;        
 };
 
 DEFINE_PLUGIN(FFTAnalyzer);

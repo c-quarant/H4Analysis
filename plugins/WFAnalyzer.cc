@@ -17,25 +17,24 @@ bool WFAnalyzer::Begin(CfgManager& opts, uint64* index)
     timeRecoTypes_ = opts.GetOpt<vector<string> >(instanceName_+".timeRecoTypes");
 
     //---channels setup
-    string templateTag="";
+    string templateTag="prof";
     if(opts.OptExist(instanceName_+".templateTags"))
         for(auto& tag : opts.GetOpt<vector<string> >(instanceName_+".templateTags"))
             for(auto& run : opts.GetOpt<vector<string> >(tag+".runList"))
                 if(run == opts.GetOpt<string>("h4reco.run"))
-                   templateTag = tag;
+                    templateTag = tag;
 
     for(auto& channel : channelsNames_)
     {        
         if(opts.OptExist(channel+".templateFit.file"))
         {            
-            TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
+	    TFile* templateFile = TFile::Open(opts.GetOpt<string>(channel+".templateFit.file", 0).c_str(), ".READ");
 	    cout << "channel:     " << channel+".templateFit.file" << endl;
 	    cout << "templateFile:    " << opts.GetOpt<string>(channel+".templateFit.file", 0).c_str() << endl;
 	    cout << "templateHisto:   " << (opts.GetOpt<string>(channel+".templateFit.file", 1)+"_"+templateTag).c_str() << endl;
-
-            TH1D* wfTemplate=(TH1D*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
+            
+	    TH1* wfTemplate=(TH1*)templateFile->Get((opts.GetOpt<string>(channel+".templateFit.file", 1)+
                                                      +"_"+templateTag).c_str());
-
 	    templates_[channel] = (TH1F*) wfTemplate->Clone();
 	    templates_[channel] -> SetDirectory(0);
             templateFile->Close();
@@ -51,17 +50,21 @@ bool WFAnalyzer::Begin(CfgManager& opts, uint64* index)
     //---outputs---
     string digiTreeName = opts.OptExist(instanceName_+".digiTreeName") ?
         opts.GetOpt<string>(instanceName_+".digiTreeName") : "digi";
+    string prefix_ = opts.OptExist(instanceName_+".digiBranchPrefix") ?
+        opts.GetOpt<string>(instanceName_+".digiBranchPrefix") : "";
     bool storeTree = opts.OptExist(instanceName_+".storeTree") ?
         opts.GetOpt<bool>(instanceName_+".storeTree") : true;
     RegisterSharedData(new TTree(digiTreeName.c_str(), "digi_tree"), "digi_tree", storeTree);
-    digiTree_ = DigiTree(index, (TTree*)data_.back().obj);
+    digiTree_ = DigiTree(index, (TTree*)data_.back().obj, prefix_);
     digiTree_.Init(channelsNames_, timeRecoTypes_);
     if(opts.GetOpt<int>(instanceName_+".fillWFtree"))
     {
         string wfTreeName = opts.OptExist(instanceName_+".wfTreeName") ?
             opts.GetOpt<string>(instanceName_+".wfTreeName") : "wf";
+        string suffix_ = opts.OptExist(instanceName_+".wfBranchSuffix") ?
+            opts.GetOpt<string>(instanceName_+".wfBranchSuffix") : "";
         RegisterSharedData(new TTree(wfTreeName.c_str(), "wf_tree"), "wf_tree", true);
-        outWFTree_ = WFTree(channelsNames_.size(), nSamples, index, (TTree*)data_.back().obj);
+        outWFTree_ = WFTree(channelsNames_.size(), nSamples, index, (TTree*)data_.back().obj, suffix_);
         outWFTree_.Init();
     }
 
@@ -82,6 +85,8 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         auto shared_data = plugins[srcInstance_]->GetSharedData(srcInstance_+"_"+channel, "", false);
         if(shared_data.size() != 0)
             WFs_[channel] = (WFClass*)shared_data.at(0).obj;
+        else
+            cout << "[WFAnalizer::" << instanceName_ << "]: channels samples not found check DigiReco step" << endl; 
     }
     
     //---compute reco variables
@@ -93,12 +98,12 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
             ++outCh;
             continue;
         }
-        
+
         //---subtract a specified channel if requested
         if(opts.OptExist(channel+".subtractChannel") && WFs_.find(opts.GetOpt<string>(channel+".subtractChannel")) != WFs_.end())
             *WFs_[channel] -= *WFs_[opts.GetOpt<string>(channel+".subtractChannel")];        
         WFs_[channel]->SetBaselineWindow(opts.GetOpt<int>(channel+".baselineWin", 0), 
-                                        opts.GetOpt<int>(channel+".baselineWin", 1));
+                                         opts.GetOpt<int>(channel+".baselineWin", 1));
         WFs_[channel]->SetSignalWindow(opts.GetOpt<int>(channel+".signalWin", 0), 
                                       opts.GetOpt<int>(channel+".signalWin", 1));
         WFBaseline baselineInfo = WFs_[channel]->SubtractBaseline();
@@ -116,13 +121,8 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
                                                                    WFs_[channel]->GetNSample());
         digiTree_.charge_sig[outCh] = WFs_[channel]->GetSignalIntegral(opts.GetOpt<int>(channel+".signalInt", 0), 
                                                                      opts.GetOpt<int>(channel+".signalInt", 1));
-
-        if(opts.OptExist(channel+".useTrigRef") && opts.GetOpt<bool>(channel+".useTrigRef"))
-           digiTree_.trigger_ref[outCh] = WFs_[channel]->GetTriggerRef();
-        else
-           digiTree_.trigger_ref[outCh] = 0.;
-
-        //---compute time with all the requested time reconstruction method
+        
+	//---compute time with all the requested time reconstruction method
         for(int iT=0; iT<timeRecoTypes_.size(); ++iT)
         {
             //---compute time with selected method or store default value (-99)
@@ -139,18 +139,9 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
                 digiTree_.time_mirror[outCh+iT*channelsNames_.size()] = -99;
                 digiTree_.time_chi2[outCh+iT*channelsNames_.size()] = -99;
             }
-        }
-	
-	//---noise subtraction with Fourier Analuysis
-	int i=0;
-	while(opts.OptExist(channel+".noiseSubtraction.order", i))
-	{
-	    //WFs_[channel]->FFT(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.tau"), opts.GetOpt<int>(channel+".noiseSubtraction.cut"));
-	    WFs_[channel]->BWFilter(*WFs_[channel], opts.GetOpt<float>(channel+".noiseSubtraction.order", i), opts.GetOpt<int>(channel+".noiseSubtraction.wCut", i));
-	    i++;
-	}
-      
-        //---template fit (only specified channels)
+}
+
+	//---template fit (only specified channels)
         WFFitResults fitResults{-1, -1000, -1, -1};
         if(opts.OptExist(channel+".templateFit.file"))
         {
@@ -163,7 +154,7 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
             digiTree_.fit_time[outCh] = fitResults.time;
             digiTree_.fit_chi2[outCh] = fitResults.chi2;
 	    digiTree_.fit_status[outCh] = fitResults.fitStatus_;
-        }            
+	} 
 
 	//---calibration constant for each channel if needed
 	if(opts.OptExist(channel+".calibration.calibrationConst"))
@@ -174,39 +165,20 @@ bool WFAnalyzer::ProcessEvent(const H4Tree& event, map<string, PluginBase*>& plu
         //---WFs---
         if(fillWFtree)
         {
-	  auto analizedWF = WFs_[channel]->GetSamples();
-	  auto noiseFilteredWF = WFs_[channel]->GetNoiseFiltSamples();
-	  int  nSamples = analizedWF->size();
-	  //cout << noiseFilteredWF->size() << endl;
-	  float tUnit = WFs_[channel]->GetTUnit();
-
-	  if(opts.OptExist(channel+".noiseSubtraction.order"))
-	  {
-	      for(int jSample=0; jSample<nSamples; ++jSample)
-	      {
-	         outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
-		 outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
-	         outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
-	         outWFTree_.WF_val_noiseCut[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample);
-	         outWFTree_.WF_val_noiseCut2[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample+nSamples);
-	         outWFTree_.WF_val_noiseCut3[jSample+outCh*nSamples] = noiseFilteredWF->at(jSample+2*nSamples);
-	      }
-	  }	  
-	  else
-	  {		 
-	      for(int jSample=0; jSample<nSamples; ++jSample)
-              {
-	         outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
-	         outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
-	         outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
-	      }
-	  }	         
-	}
-	
-	//---increase output tree channel counter
+            auto analizedWF = WFs_[channel]->GetSamples();
+            int nSamples = analizedWF->size();
+            float tUnit = WFs_[channel]->GetTUnit();
+            for(unsigned int jSample=0; jSample<analizedWF->size(); ++jSample)
+            {
+                outWFTree_.WF_ch[jSample+outCh*nSamples] = outCh;
+                outWFTree_.WF_time[jSample+outCh*nSamples] = jSample*tUnit;
+                outWFTree_.WF_val[jSample+outCh*nSamples] = analizedWF->at(jSample);
+            }
+        }
+        //---increase output tree channel counter
         ++outCh;
     }
-    
+
     //---fill the output trees 
     //---reco var
     digiTree_.Fill();
